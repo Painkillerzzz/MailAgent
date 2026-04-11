@@ -62,6 +62,12 @@ async def reminders_page(request: Request):
     return templates.TemplateResponse(request=request, name="reminders.html")
 
 
+@web_app.get("/summary", response_class=HTMLResponse)
+async def summary_page(request: Request):
+    """总结页"""
+    return templates.TemplateResponse(request=request, name="summary.html")
+
+
 @web_app.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request):
     """设置页"""

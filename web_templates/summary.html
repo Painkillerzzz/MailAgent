@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Summary{% endblock %}
+{% block content %}
+
+<div x-data="{ stats: null, briefing: '', loadingBriefing: false, loaded: false }" x-init="
+    fetch('/api/summary').then(r => r.json()).then(d => { stats = d; loaded = true; });
+">
+
+    <!-- Stats Cards -->
+    <template x-if="loaded">
+        <div>
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.75rem; margin-bottom: 1.5rem;">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <div style="font-size: 2rem; font-weight: 700; color: var(--color-primary);" x-text="stats.total"></div>
+                        <div class="text-muted" style="font-size: 0.8rem;">Total Emails</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body text-center">
+                        <div style="font-size: 2rem; font-weight: 700; color: var(--color-danger);" x-text="stats.urgent"></div>
+                        <div class="text-muted" style="font-size: 0.8rem;">Urgent</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body text-center">
+                        <div style="font-size: 2rem; font-weight: 700; color: var(--color-warning);" x-text="stats.needs_reply"></div>
+                        <div class="text-muted" style="font-size: 0.8rem;">Needs Reply</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body text-center">
+                        <div style="font-size: 2rem; font-weight: 700; color: var(--color-primary);" x-text="stats.meetings"></div>
+                        <div class="text-muted" style="font-size: 0.8rem;">Meetings</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body text-center">
+                        <div style="font-size: 2rem; font-weight: 700; color: var(--color-success);" x-text="stats.tasks"></div>
+                        <div class="text-muted" style="font-size: 0.8rem;">Tasks</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <!-- By Category -->
+                <div class="card">
+                    <div class="card-header"><h3>By Category</h3></div>
+                    <div class="card-body">
+                        <template x-if="stats.by_category && Object.keys(stats.by_category).length > 0">
+                            <table>
+                                <thead><tr><th>Category</th><th style="text-align:right;">Count</th></tr></thead>
+                                <tbody>
+                                    <template x-for="[cat, count] in Object.entries(stats.by_category).sort((a,b) => b[1]-a[1])">
+                                        <tr>
+                                            <td x-text="cat" style="text-transform: capitalize;"></td>
+                                            <td style="text-align:right;" x-text="count"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </template>
+                        <template x-if="!stats.by_category || Object.keys(stats.by_category).length === 0">
+                            <p class="text-muted text-center" style="padding:1rem;">No data</p>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- By Urgency -->
+                <div class="card">
+                    <div class="card-header"><h3>By Urgency</h3></div>
+                    <div class="card-body">
+                        <template x-if="stats.by_urgency && Object.keys(stats.by_urgency).length > 0">
+                            <table>
+                                <thead><tr><th>Urgency</th><th style="text-align:right;">Count</th></tr></thead>
+                                <tbody>
+                                    <template x-for="[urg, count] in Object.entries(stats.by_urgency)">
+                                        <tr>
+                                            <td><span class="badge" :class="'badge-' + urg" x-text="urg"></span></td>
+                                            <td style="text-align:right;" x-text="count"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </template>
+                        <template x-if="!stats.by_urgency || Object.keys(stats.by_urgency).length === 0">
+                            <p class="text-muted text-center" style="padding:1rem;">No data</p>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Briefing -->
+            <div class="card" style="margin-top: 1rem;">
+                <div class="card-header">
+                    <h3>AI Briefing</h3>
+                    <button class="btn btn-primary" @click="
+                        loadingBriefing = true;
+                        fetch('/api/summary/briefing').then(r => r.json()).then(d => {
+                            briefing = d.briefing;
+                            loadingBriefing = false;
+                        }).catch(() => { loadingBriefing = false; });
+                    " :disabled="loadingBriefing || stats.total === 0">
+                        <span x-show="!loadingBriefing">Generate Briefing</span>
+                        <span x-show="loadingBriefing"><span class="spinner" style="width:14px;height:14px;border-width:2px;"></span> Generating...</span>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <template x-if="briefing">
+                        <div style="white-space: pre-wrap; line-height: 1.7; font-size: 0.9rem;" x-text="briefing"></div>
+                    </template>
+                    <template x-if="!briefing && !loadingBriefing">
+                        <p class="text-muted text-center" style="padding: 1rem;">
+                            Click "Generate Briefing" to get an AI-powered email summary.
+                        </p>
+                    </template>
+                    <template x-if="loadingBriefing">
+                        <div class="text-center" style="padding: 2rem;"><div class="spinner"></div> Generating AI briefing...</div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template x-if="!loaded">
+        <div class="text-center" style="padding: 3rem;"><div class="spinner"></div> Loading summary...</div>
+    </template>
+
+</div>
+
+{% endblock %}

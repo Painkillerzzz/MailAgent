@@ -279,6 +279,35 @@ async def api_reminders_partial(
     return _templates.TemplateResponse(request=request, name=template_name, context=ctx)
 
 
+# ── 总结端点 ──
+
+
+@api_router.get("/summary")
+async def api_summary():
+    store = _get_result_store()
+    results = store.list_results()
+
+    from mail_agent.understanding.summarizer import EmailSummarizer
+
+    summarizer = EmailSummarizer()
+    stats = summarizer.generate_stats(results)
+    return stats
+
+
+@api_router.get("/summary/briefing")
+async def api_summary_briefing():
+    store = _get_result_store()
+    results = store.list_results()
+
+    from mail_agent.understanding.summarizer import EmailSummarizer
+
+    config = load_config()
+    llm = LLMClient(config.llm)
+    summarizer = EmailSummarizer(llm)
+    briefing = summarizer.generate_briefing(results)
+    return {"briefing": briefing}
+
+
 # ── 设置端点 ──
 
 

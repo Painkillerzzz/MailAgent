@@ -252,6 +252,56 @@ def analyze(
 
 
 @app.command()
+def summary(
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="使用LLM生成详细简报"),
+):
+    """生成邮件处理摘要"""
+    from mail_agent.web.result_store import ResultStore
+    from mail_agent.understanding.summarizer import EmailSummarizer
+
+    store = ResultStore()
+    results = store.list_results()
+
+    if not results:
+        console.print("[yellow]没有已处理的邮件。请先运行 demo 或 fetch。[/yellow]")
+        return
+
+    summarizer = EmailSummarizer()
+    stats = summarizer.generate_stats(results)
+
+    # 统计表
+    table = Table(title="Email Summary")
+    table.add_column("Metric", style="bold cyan")
+    table.add_column("Count", justify="right")
+    table.add_row("Total Emails", str(stats["total"]))
+    table.add_row("Needs Reply", str(stats["needs_reply"]))
+    table.add_row("Meetings", str(stats["meetings"]))
+    table.add_row("Tasks/Deadlines", str(stats["tasks"]))
+    table.add_row("Urgent", str(stats["urgent"]))
+    console.print(table)
+
+    # 分类统计
+    if stats["by_category"]:
+        cat_table = Table(title="By Category")
+        cat_table.add_column("Category", style="cyan")
+        cat_table.add_column("Count", justify="right")
+        for cat, count in sorted(stats["by_category"].items(), key=lambda x: -x[1]):
+            cat_table.add_row(cat, str(count))
+        console.print(cat_table)
+
+    # LLM 简报
+    if verbose:
+        console.print("\n[bold]Generating AI briefing...[/bold]")
+        config = load_config()
+        from mail_agent.llm.client import LLMClient
+
+        llm = LLMClient(config.llm)
+        summarizer_llm = EmailSummarizer(llm)
+        briefing = summarizer_llm.generate_briefing(results)
+        console.print(Panel(briefing, title="[bold blue]AI Briefing[/bold blue]", border_style="blue"))
+
+
+@app.command()
 def web(
     host: str = typer.Option("0.0.0.0", "--host", "-h", help="监听地址"),
     port: int = typer.Option(8000, "--port", "-p", help="监听端口"),
