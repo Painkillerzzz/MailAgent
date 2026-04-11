@@ -1,6 +1,6 @@
 [project]
 name = "mail-agent"
-version = "0.1.0"
+version = "0.2.0"
 description = "基于大模型的智能邮件管理代理系统"
 readme = "README.md"
 requires-python = ">=3.12"
