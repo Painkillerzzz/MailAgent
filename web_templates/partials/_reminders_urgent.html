@@ -1,0 +1,16 @@
+{% if results %}
+{% for r in results %}
+<div style="padding: 0.6rem 0; border-bottom: 1px solid #eee;">
+    <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <span class="badge badge-{{ r.priority.level.value }}">{{ r.priority.level.value }}</span>
+        <strong style="font-size: 0.9rem;">{{ r.email.subject }}</strong>
+    </div>
+    <div style="font-size: 0.8rem; color: #888; margin-top: 0.25rem;">
+        From: {{ r.email.sender_name or r.email.sender }}
+    </div>
+    <div style="font-size: 0.85rem; margin-top: 0.25rem;">{{ r.analysis.summary }}</div>
+</div>
+{% endfor %}
+{% else %}
+<p class="text-muted" style="text-align:center; padding:1rem;">No urgent emails</p>
+{% endif %}

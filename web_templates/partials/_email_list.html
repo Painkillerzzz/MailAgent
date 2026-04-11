@@ -1,0 +1,50 @@
+{% if results %}
+{% for r in results %}
+<div class="email-card urgency-{{ r.priority.level.value }}" x-data="{ expanded: false }">
+    <div class="email-card-header" @click="expanded = !expanded">
+        <span class="badge badge-{{ r.priority.level.value }}">{{ r.priority.level.value }}</span>
+        <span class="email-card-subject">{{ r.email.subject }}</span>
+        <span class="email-card-sender">{{ r.email.sender_name or r.email.sender }}</span>
+        <span class="email-card-score">{{ "%.1f"|format(r.priority.total_score) }}</span>
+        <span class="email-card-toggle" :class="expanded && 'expanded'">&#9654;</span>
+    </div>
+    <div class="email-card-details" x-show="expanded" x-cloak>
+        <table style="margin-top: 0.75rem;">
+            <tr><th style="width:130px;">Intent</th><td>{{ r.analysis.intent.value }}</td></tr>
+            <tr><th>Urgency</th><td>{{ r.analysis.urgency.value }}</td></tr>
+            <tr><th>Category</th><td>{{ r.analysis.category.value }}</td></tr>
+            <tr><th>Requires Reply</th><td>{{ r.analysis.requires_reply }}</td></tr>
+            <tr><th>Summary</th><td>{{ r.analysis.summary }}</td></tr>
+            {% if r.analysis.key_points %}
+            <tr><th>Key Points</th><td>{{ r.analysis.key_points | join('; ') }}</td></tr>
+            {% endif %}
+        </table>
+
+        {% if r.calendar_event %}
+        <div style="margin-top: 0.75rem; padding: 0.6rem; background: #e8f5e9; border-radius: 4px; font-size: 0.9rem;">
+            <strong>Calendar:</strong> {{ r.calendar_event.title }}
+            ({{ r.calendar_event.start_time.strftime('%Y-%m-%d %H:%M') }} &ndash; {{ r.calendar_event.end_time.strftime('%H:%M') }})
+        </div>
+        {% endif %}
+
+        {% if r.schedule_conflict and r.schedule_conflict.has_conflict %}
+        <div class="conflict-warning" style="margin-top: 0.5rem;">
+            Conflict with {{ r.schedule_conflict.conflicting_events | length }} event(s)
+        </div>
+        {% endif %}
+
+        {% if r.reply_draft %}
+        <div class="reply-box">{{ r.reply_draft.body }}</div>
+        {% endif %}
+
+        <div style="margin-top: 0.5rem; font-size: 0.75rem; color: #aaa;">
+            {% for step in r.processing_steps %}{{ step }}<br>{% endfor %}
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="empty-state">
+    <p>No emails yet. Click <strong>Run Demo</strong> or <strong>Analyze Email</strong> to get started.</p>
+</div>
+{% endif %}

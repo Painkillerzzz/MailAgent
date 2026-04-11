@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Emails{% endblock %}
+{% block content %}
+
+<div class="grid-2" style="margin-bottom: 1rem;">
+    <!-- Run Demo -->
+    <div class="card">
+        <div class="card-header"><h3>Demo</h3></div>
+        <div class="card-body">
+            <p class="text-muted mb-1">Process 3 sample emails to see the agent in action.</p>
+            <button class="btn btn-primary"
+                    hx-post="/api/demo"
+                    hx-target="#email-list"
+                    hx-swap="innerHTML"
+                    hx-on::after-request="if(event.detail.successful) { showToast('Demo processed', 'success'); htmx.ajax('GET', '/api/emails/partial', '#email-list'); }">
+                Run Demo
+            </button>
+        </div>
+    </div>
+
+    <!-- Analyze Email -->
+    <div class="card" x-data="{ showForm: false }">
+        <div class="card-header" style="cursor:pointer" @click="showForm = !showForm">
+            <h3>Analyze Email</h3>
+            <span x-text="showForm ? '−' : '+'" style="font-size:1.2rem;"></span>
+        </div>
+        <div class="card-body" x-show="showForm" x-cloak>
+            <form hx-post="/api/emails/process"
+                  hx-target="#email-list"
+                  hx-swap="innerHTML"
+                  hx-on::after-request="if(event.detail.successful) { showToast('Analysis complete', 'success'); htmx.ajax('GET', '/api/emails/partial', '#email-list'); }">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Sender Name</label>
+                        <input type="text" name="sender_name" placeholder="Prof. Lee">
+                    </div>
+                    <div class="form-group">
+                        <label>Sender Email</label>
+                        <input type="email" name="sender" placeholder="lee@university.edu" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Subject</label>
+                    <input type="text" name="subject" placeholder="Meeting request" required>
+                </div>
+                <div class="form-group">
+                    <label>Body</label>
+                    <textarea name="body" placeholder="Email body..." required></textarea>
+                </div>
+                <button type="submit" class="btn btn-success">Analyze</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar"
+     hx-get="/api/emails/partial"
+     hx-trigger="change from:find select, change from:find input"
+     hx-target="#email-list"
+     hx-swap="innerHTML"
+     hx-include="find select, find input">
+    <label>Urgency</label>
+    <select name="urgency">
+        <option value="">All</option>
+        <option value="critical">Critical</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+    </select>
+
+    <label>Category</label>
+    <select name="category">
+        <option value="">All</option>
+        <option value="meeting">Meeting</option>
+        <option value="task">Task</option>
+        <option value="cooperation">Cooperation</option>
+        <option value="notification">Notification</option>
+        <option value="social">Social</option>
+        <option value="other">Other</option>
+    </select>
+
+    <label>Sort</label>
+    <select name="sort_by">
+        <option value="priority">Priority Score</option>
+        <option value="date">Date</option>
+    </select>
+    <select name="order">
+        <option value="desc">Desc</option>
+        <option value="asc">Asc</option>
+    </select>
+
+    <input type="text" name="search" placeholder="Search..." style="flex:1; min-width:120px;"
+           hx-trigger="keyup changed delay:300ms">
+</div>
+
+<!-- Email List -->
+<div id="email-list"
+     hx-get="/api/emails/partial"
+     hx-trigger="load, refresh"
+     hx-swap="innerHTML">
+    <div class="htmx-indicator"><div class="spinner"></div> Loading...</div>
+</div>
+
+{% endblock %}

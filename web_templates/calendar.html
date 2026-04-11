@@ -1,35 +1,41 @@
 {% extends "base.html" %}
 {% block title %}Calendar{% endblock %}
+{% block extra_head %}
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.17/index.global.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.17/index.global.min.js"></script>
+<script defer src="/static/js/calendar.js"></script>
+{% endblock %}
+
 {% block content %}
+<div x-data="calendarApp" x-init="init()">
 
-<div class="card">
-    <div class="card-header"><h3>Upcoming Events (30 days)</h3></div>
-    <div class="card-body">
-        {% if events %}
-        <table>
-            <thead>
-                <tr>
-                    <th>Time</th>
-                    <th>Title</th>
-                    <th>Attendees</th>
-                    <th>Description</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for evt in events %}
-                <tr>
-                    <td>{{ evt.start_time.strftime('%Y-%m-%d %H:%M') }} - {{ evt.end_time.strftime('%H:%M') }}</td>
-                    <td><strong>{{ evt.title }}</strong></td>
-                    <td>{{ evt.attendees | join(', ') }}</td>
-                    <td>{{ evt.description }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p style="color: #888; text-align: center; padding: 2rem;">No upcoming events.</p>
-        {% endif %}
+    <div class="card">
+        <div class="card-body" style="padding: 1rem;">
+            <div id="fc-calendar"></div>
+        </div>
     </div>
-</div>
 
+    <!-- Event Detail Modal -->
+    <div x-show="showModal" x-cloak class="modal-overlay" @click.self="showModal = false" @keydown.escape.window="showModal = false">
+        <div class="modal">
+            <h3 x-text="selectedEvent.title" style="margin-bottom: 0.75rem;"></h3>
+            <table>
+                <tr><th style="width:100px;">Time</th><td><span x-text="selectedEvent.start"></span> &ndash; <span x-text="selectedEvent.end"></span></td></tr>
+                <tr><th>Description</th><td x-text="selectedEvent.description"></td></tr>
+                <tr x-show="selectedEvent.attendees"><th>Attendees</th><td x-text="selectedEvent.attendees"></td></tr>
+                <tr x-show="selectedEvent.location"><th>Location</th><td x-text="selectedEvent.location"></td></tr>
+            </table>
+
+            <div x-show="selectedEvent.has_conflict" class="conflict-warning" style="margin-top: 0.75rem;">
+                This event conflicts with another event!
+            </div>
+
+            <div style="margin-top: 1rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button class="btn btn-danger" @click="deleteEvent()">Delete</button>
+                <button class="btn btn-secondary" @click="showModal = false">Close</button>
+            </div>
+        </div>
+    </div>
+
+</div>
 {% endblock %}

@@ -1,0 +1,15 @@
+{% if results %}
+{% for r in results %}
+<div style="padding: 0.6rem 0; border-bottom: 1px solid #eee;">
+    <strong style="font-size: 0.9rem;">{{ r.email.subject }}</strong>
+    <div style="font-size: 0.8rem; color: #888; margin-top: 0.25rem;">
+        From: {{ r.email.sender_name or r.email.sender }}
+    </div>
+    <div style="font-size: 0.85rem; color: var(--color-warning); margin-top: 0.25rem;">
+        Deadline: {{ r.analysis.schedule_description }}
+    </div>
+</div>
+{% endfor %}
+{% else %}
+<p class="text-muted" style="text-align:center; padding:1rem;">No upcoming deadlines</p>
+{% endif %}
