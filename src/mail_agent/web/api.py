@@ -11,7 +11,8 @@ from fastapi.templating import Jinja2Templates
 
 from mail_agent.agent.orchestrator import MailAgent
 from mail_agent.calendar.store import CalendarStore
-from mail_agent.config import load_config
+import mail_agent.config as _cfg_module
+from mail_agent.config import load_config as _load_config_uncached
 from mail_agent.email.fetcher import IMAPFetcher
 from mail_agent.llm.client import LLMClient
 from mail_agent.models import EmailMessage
@@ -49,6 +50,41 @@ def _get_settings_store() -> SettingsStore:
     if _settings_store is None:
         raise RuntimeError("API 未初始化：settings_store 为空，请先调用 init_api()")
     return _settings_store
+
+
+# 配置缓存：load_config 每次都读盘+解析 settings.json，Web 每个请求多次调用。
+# 以 (settings.json 路径, mtime) 为键缓存；文件被写入（mtime 变化）或显式失效时刷新。
+_config_cache: tuple[str, float, object] | None = None
+
+
+def _settings_file():
+    # 运行时解析（测试会 monkeypatch DATA_DIR），与 load_config 读取的是同一文件
+    return _cfg_module.DATA_DIR / "settings.json"
+
+
+def load_config():
+    """带缓存的配置加载：settings.json 未变更时复用，返回独立副本避免被调用方修改污染缓存。"""
+    global _config_cache
+    path = _settings_file()
+    try:
+        mtime = path.stat().st_mtime
+    except OSError:
+        mtime = 0.0
+    if (
+        _config_cache is not None
+        and _config_cache[0] == str(path)
+        and _config_cache[1] == mtime
+    ):
+        return _config_cache[2].model_copy(deep=True)
+    config = _load_config_uncached()
+    _config_cache = (str(path), mtime, config)
+    return config.model_copy(deep=True)
+
+
+def _invalidate_config_cache() -> None:
+    """settings 保存后调用，确保下次请求立即读到最新配置。"""
+    global _config_cache
+    _config_cache = None
 
 
 def _get_agent() -> MailAgent:
@@ -529,6 +565,7 @@ async def api_save_settings(request: Request):
         body = await request.json()
         store = _get_settings_store()
         store.save(body)
+        _invalidate_config_cache()  # 立即让后续请求读到新配置
         return {"success": True, "message": "设置已保存"}
     except Exception as e:
         return JSONResponse(

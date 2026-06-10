@@ -142,6 +142,10 @@ def _isolate_data_dir(tmp_path, monkeypatch):
     monkeypatch.setattr(cfg, "DATA_DIR", data, raising=False)
     monkeypatch.setattr(rs, "DEFAULT_RESULTS_PATH", data / "results.json", raising=False)
     monkeypatch.setattr(ss, "DEFAULT_SETTINGS_PATH", data / "settings.json", raising=False)
+    # 清空 Web 层配置缓存，避免跨用例污染
+    import mail_agent.web.api as web_api
+
+    monkeypatch.setattr(web_api, "_config_cache", None, raising=False)
     fld = cfg.CalendarConfig.model_fields.get("storage_path")
     if fld is not None:
         monkeypatch.setattr(fld, "default", data / "calendar.json", raising=False)

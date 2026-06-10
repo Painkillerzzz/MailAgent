@@ -378,3 +378,27 @@ class TestGoogleAPI:
         )
         resp = client.post("/api/emails/fetch", json={"limit": 5})
         assert resp.status_code == 400
+
+
+def test_config_cache_reuses_and_invalidates(monkeypatch):
+    """load_config 在 settings 未变时复用缓存，失效后重新加载，且返回独立副本。"""
+    import mail_agent.web.api as web_api
+    from mail_agent.config import AppConfig
+
+    monkeypatch.setattr(web_api, "_config_cache", None, raising=False)
+    calls = {"n": 0}
+
+    def fake_loader():
+        calls["n"] += 1
+        return AppConfig()
+
+    monkeypatch.setattr(web_api, "_load_config_uncached", fake_loader)
+
+    c1 = web_api.load_config()
+    c2 = web_api.load_config()
+    assert calls["n"] == 1          # 第二次命中缓存，未重复解析
+    assert c1 is not c2             # 每次返回独立副本，避免互相污染
+
+    web_api._invalidate_config_cache()
+    web_api.load_config()
+    assert calls["n"] == 2          # 失效后重新加载
