@@ -79,6 +79,7 @@ class CalendarScheduler:
         self,
         desired_start: datetime,
         desired_end: datetime,
+        ref_now: datetime | None = None,
     ) -> list[TimeSlot]:
         """在日历空闲处找出靠近期望时间、不与已有事件冲突的可行时段
 
@@ -88,6 +89,8 @@ class CalendarScheduler:
         Args:
             desired_start: 期望开始时间
             desired_end: 期望结束时间
+            ref_now: 参考“当前时刻”，早于它的时段视为过去而不建议。
+                默认取系统当前时间；测试可注入以获得确定性结果。
 
         Returns:
             按与期望时间接近程度排序的 TimeSlot 列表
@@ -114,7 +117,8 @@ class CalendarScheduler:
             logger.warning("查询空闲时段失败: %s", e)
             events = []
 
-        ref_now = datetime.now().astimezone()  # 不建议早于当前时刻的（过去）时段
+        # 不建议早于参考时刻的（过去）时段；ref_now 可注入以便测试确定性
+        ref_now = _aware(ref_now) if ref_now is not None else datetime.now().astimezone()
         found: list[TimeSlot] = []
         for off in range(0, cfg.search_days + 1):
             day = ds + timedelta(days=off)

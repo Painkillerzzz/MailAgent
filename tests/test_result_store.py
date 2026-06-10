@@ -89,6 +89,22 @@ class TestResultStore:
         results = store.list_results(sort_by="priority", order="asc")
         assert results[0].priority.total_score <= results[1].priority.total_score
 
+    def test_list_results_sort_by_date_mixed_tz(self, store):
+        """date 排序：None / naive / aware 混合不应抛 TypeError，且 None 排到最早端。"""
+        aware = _make_result(message_id="aware")
+        aware.email.date = datetime(2026, 6, 1, 12, 0, tzinfo=timezone.utc)
+        naive = _make_result(message_id="naive")
+        naive.email.date = datetime(2026, 6, 2, 12, 0)  # naive，按 UTC 处理
+        nodate = _make_result(message_id="nodate")
+        nodate.email.date = None
+        store.add_many([aware, naive, nodate])
+
+        desc = store.list_results(sort_by="date", order="desc")
+        assert [r.email.message_id for r in desc] == ["naive", "aware", "nodate"]
+
+        asc = store.list_results(sort_by="date", order="asc")
+        assert asc[0].email.message_id == "nodate"
+
     def test_filter_by_urgency(self, store):
         store.add(_make_result(message_id="c", urgency=UrgencyLevel.CRITICAL, score=10))
         store.add(_make_result(message_id="l", urgency=UrgencyLevel.LOW, score=1))

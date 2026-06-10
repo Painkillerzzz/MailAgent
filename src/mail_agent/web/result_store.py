@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 
 from mail_agent.config import DATA_DIR
@@ -103,10 +104,17 @@ class ResultStore:
 
         reverse = order == "desc"
         if sort_by == "date":
-            filtered.sort(
-                key=lambda r: r.email.date or "",
-                reverse=reverse,
-            )
+            # 统一归一为 tz-aware：缺失日期排到最早；naive 补 UTC，
+            # 避免 datetime 与 ""(str) 或 aware 与 naive 混比触发 TypeError。
+            _epoch = datetime.min.replace(tzinfo=timezone.utc)
+
+            def _date_key(r):
+                d = r.email.date
+                if d is None:
+                    return _epoch
+                return d if d.tzinfo is not None else d.replace(tzinfo=timezone.utc)
+
+            filtered.sort(key=_date_key, reverse=reverse)
         else:
             filtered.sort(
                 key=lambda r: r.priority.total_score,

@@ -160,6 +160,7 @@ class TestFindFreeSlots:
         slots = sch.find_free_slots(
             datetime(2026, 6, 10, 10, 0, tzinfo=tz),
             datetime(2026, 6, 10, 11, 0, tzinfo=tz),
+            ref_now=datetime(2026, 6, 10, 8, 0, tzinfo=tz),
         )
         assert len(slots) == 3
         # 没有任何建议与 busy(10-11) 重叠
@@ -172,6 +173,7 @@ class TestFindFreeSlots:
         slots = sch.find_free_slots(
             datetime(2026, 6, 10, 10, 0, tzinfo=tz),
             datetime(2026, 6, 10, 11, 0, tzinfo=tz),
+            ref_now=datetime(2026, 6, 10, 8, 0, tzinfo=tz),
         )
         # 最近的空闲应是 09:00 或 11:00（距 10:00 各 1 小时）
         assert slots[0].start_time.hour in (9, 11)
@@ -182,6 +184,7 @@ class TestFindFreeSlots:
         slots = sch.find_free_slots(
             datetime(2026, 6, 10, 10, 0, tzinfo=tz),
             datetime(2026, 6, 10, 11, 0, tzinfo=tz),
+            ref_now=datetime(2026, 6, 10, 8, 0, tzinfo=tz),
         )
         for s in slots:
             assert 9 <= s.start_time.hour
@@ -195,6 +198,7 @@ class TestFindFreeSlots:
         slots = sch.find_free_slots(
             datetime(2026, 6, 10, 10, 0, tzinfo=tz),
             datetime(2026, 6, 10, 11, 0, tzinfo=tz),
+            ref_now=datetime(2026, 6, 10, 8, 0, tzinfo=tz),
         )
         assert slots, "应顺延到后续日期给出建议"
         assert all(s.start_time.day != 10 for s in slots)
