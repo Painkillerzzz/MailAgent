@@ -17,6 +17,11 @@ from mail_agent.models import CalendarEvent, ScheduleConflict
 logger = logging.getLogger(__name__)
 
 
+def _aware(dt: datetime) -> datetime:
+    """确保 datetime 带时区，便于与解析出的(可能带时区)时间安全比较。"""
+    return dt if dt.tzinfo is not None else dt.astimezone()
+
+
 class CalendarStore:
     """基于 JSON 的本地日历存储"""
 
@@ -28,25 +33,30 @@ class CalendarStore:
         self._load()
 
     def _load(self):
-        """从 JSON 文件加载事件"""
-        if self._path.exists():
+        """从 JSON 文件加载事件（逐条校验，一条坏数据不丢全部）"""
+        self._events = []
+        if not self._path.exists():
+            return
+        try:
+            data = json.loads(self._path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning("日历数据加载失败: %s，将使用空日历", e)
+            return
+        for e in data if isinstance(data, list) else []:
             try:
-                data = json.loads(self._path.read_text(encoding="utf-8"))
-                self._events = [CalendarEvent.model_validate(e) for e in data]
-                logger.debug("加载了 %d 个日历事件", len(self._events))
-            except (json.JSONDecodeError, Exception) as e:
-                logger.warning("日历数据加载失败: %s，将使用空日历", e)
-                self._events = []
-        else:
-            self._events = []
+                self._events.append(CalendarEvent.model_validate(e))
+            except Exception as ex:  # noqa: BLE001
+                logger.warning("跳过无法解析的日历事件: %s", ex)
+        logger.debug("加载了 %d 个日历事件", len(self._events))
 
     def _save(self):
-        """持久化到 JSON 文件"""
-        self._path.parent.mkdir(parents=True, exist_ok=True)
+        """原子持久化到 JSON 文件（避免半写损坏/清空）"""
+        from mail_agent.io_utils import atomic_write_text
+
         data = [e.model_dump(mode="json") for e in self._events]
-        self._path.write_text(
+        atomic_write_text(
+            self._path,
             json.dumps(data, ensure_ascii=False, indent=2, default=str),
-            encoding="utf-8",
         )
 
     def add_event(self, event: CalendarEvent) -> CalendarEvent:
@@ -97,12 +107,12 @@ class CalendarStore:
         """
         results = []
         for e in self._events:
-            if start and e.end_time < start:
+            if start and _aware(e.end_time) < _aware(start):
                 continue
-            if end and e.start_time > end:
+            if end and _aware(e.start_time) > _aware(end):
                 continue
             results.append(e)
-        return sorted(results, key=lambda e: e.start_time)
+        return sorted(results, key=lambda e: _aware(e.start_time))
 
     def check_conflict(
         self, start_time: datetime, end_time: datetime
@@ -117,9 +127,10 @@ class CalendarStore:
             ScheduleConflict 冲突信息
         """
         conflicts = []
+        s, en = _aware(start_time), _aware(end_time)
         for e in self._events:
             # 两个时间段重叠的条件: start1 < end2 and start2 < end1
-            if e.start_time < end_time and start_time < e.end_time:
+            if _aware(e.start_time) < en and s < _aware(e.end_time):
                 conflicts.append(e)
         return ScheduleConflict(
             has_conflict=len(conflicts) > 0,

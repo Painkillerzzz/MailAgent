@@ -1,11 +1,19 @@
 """Agent 编排器集成测试（使用真实智谱AI API）"""
 
+import os
+
 import pytest
 
 from mail_agent.agent.orchestrator import MailAgent
 from mail_agent.models import EmailMessage, UrgencyLevel
 
 from datetime import datetime, timezone
+
+# 这些用例会发起真实 LLM 调用：无真实 key 时整模块跳过
+pytestmark = pytest.mark.skipif(
+    not (os.getenv("ZAI_API_KEY") and os.getenv("ZAI_API_KEY") != "test-dummy-key"),
+    reason="需要真实 ZAI_API_KEY 的集成测试",
+)
 
 
 class TestMailAgent:

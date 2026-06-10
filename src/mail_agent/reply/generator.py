@@ -86,7 +86,18 @@ class ReplyGenerator:
                 for e in conflict.conflicting_events
             )
             calendar_context += f"\nWARNING: Schedule conflict with: {conflict_info}"
-            calendar_context += "\nSuggest an alternative time in the reply."
+            if conflict.suggested_slots:
+                slots = "; ".join(
+                    f"{s.start_time.strftime('%Y-%m-%d %H:%M')}-{s.end_time.strftime('%H:%M')}"
+                    for s in conflict.suggested_slots
+                )
+                calendar_context += (
+                    f"\nThe following times ARE FREE on the user's calendar. "
+                    f"Politely propose one or more of these specific times as an "
+                    f"alternative: {slots}"
+                )
+            else:
+                calendar_context += "\nSuggest an alternative time in the reply."
 
         user_content = REPLY_USER_TEMPLATE.format(
             sender_name=email_msg.sender_name or email_msg.sender,
