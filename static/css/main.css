@@ -348,3 +348,74 @@ th { background: #f8f9fa; font-weight: 600; font-size: 0.8rem; text-transform: u
 .fc .fc-toolbar-title { font-size: 1.2rem; }
 .fc .fc-button { font-size: 0.8rem; }
 .fc .fc-daygrid-event { border-radius: 3px; padding: 1px 4px; }
+
+/* ── Google 集成 / 投递状态 / 自检 ── */
+.nav-gdot {
+    width: 10px; height: 10px; border-radius: 50%;
+    display: inline-block; margin-right: 0.4rem; cursor: help;
+    vertical-align: middle;
+}
+.gdot-ok { background: #2ecc71; box-shadow: 0 0 4px #2ecc71; }
+.gdot-warn { background: #f1c40f; }
+.gdot-off { background: #bbb; }
+.gdot-unknown { background: #ddd; }
+
+.gstatus {
+    font-size: 0.72rem; font-weight: 600; padding: 0.15rem 0.55rem;
+    border-radius: 12px; text-transform: none;
+}
+.gstatus-ok { background: #e8f5e9; color: #1e7e34; }
+.gstatus-warn { background: #fff8e1; color: #b8860b; }
+.gstatus-off { background: #eee; color: #777; }
+
+.badge-google { background: #4285f4; color: #fff; text-transform: none; }
+.badge-local { background: #95a5a6; color: #fff; text-transform: none; }
+.badge-sent { background: var(--color-success); color: #fff; text-transform: none; }
+.badge-draft { background: #5dade2; color: #fff; text-transform: none; }
+
+.check-inline {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    margin-right: 1rem; font-size: 0.9rem; font-weight: normal;
+}
+.check-inline input { width: auto; }
+
+.status-table { width: 100%; font-size: 0.88rem; }
+.status-table th { text-align: left; width: 120px; color: var(--color-muted); font-weight: 600; padding: 0.2rem 0; }
+
+.selfcheck-block {
+    border: 1px solid #eee; border-radius: var(--radius-sm);
+    padding: 0.6rem 0.8rem; margin-bottom: 0.6rem; background: #fafafa;
+}
+.selfcheck-line { font-size: 0.82rem; padding: 0.1rem 0 0.1rem 1.2rem; display: flex; gap: 0.5rem; }
+
+/* ── 邮件展示增强 ── */
+.email-summary {
+    margin: 0.4rem 0 0.2rem; color: #444; font-size: 0.92rem; line-height: 1.5;
+}
+.chip {
+    display: inline-block; font-size: 0.68rem; padding: 0.1rem 0.45rem;
+    border-radius: 10px; margin-left: 0.3rem; vertical-align: middle; color: #fff;
+}
+.chip-cal { background: #2e7d32; }
+.chip-reply { background: #1565c0; }
+
+.block-cal {
+    margin-top: 0.6rem; padding: 0.55rem 0.7rem; font-size: 0.9rem;
+    background: #e8f5e9; border-left: 3px solid #2e7d32; border-radius: 4px;
+}
+.block-conflict {
+    margin-top: 0.6rem; padding: 0.55rem 0.7rem; font-size: 0.9rem;
+    background: #fff4e5; border-left: 3px solid #e67e22; border-radius: 4px;
+}
+.conflict-list { margin-top: 0.3rem; display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.conflict-list span {
+    background: #ffe0b2; color: #8a5200; padding: 0.1rem 0.45rem;
+    border-radius: 4px; font-size: 0.8rem;
+}
+.suggest-slots { margin-top: 0.45rem; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+.suggest-label { font-size: 0.85rem; color: #2e7d32; font-weight: 600; }
+.slot-pill {
+    background: #2e7d32; color: #fff; padding: 0.12rem 0.5rem;
+    border-radius: 12px; font-size: 0.8rem; font-weight: 600;
+}
+.reply-head { margin-top: 0.7rem; font-size: 0.88rem; color: #333; }

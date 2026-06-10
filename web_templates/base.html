@@ -13,6 +13,7 @@
 <body>
     <nav class="navbar">
         <h1>Mail Agent</h1>
+        <span class="nav-gdot" x-data="googleStatusDot" :class="'gdot-'+state" :title="title"></span>
         <a href="/">Emails</a>
         <a href="/calendar">Calendar</a>
         <a href="/reminders" x-data="badgeCounter" x-init="startPolling()" style="position:relative;">

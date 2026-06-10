@@ -1,6 +1,6 @@
 """用户设置持久化存储
 
-持久化到 data/settings.json，支持密钥脱敏。
+持久化到 data/settings.json，支持密钥脱敏、键白名单与原子写入。
 """
 
 from __future__ import annotations
@@ -19,6 +19,16 @@ DEFAULT_SETTINGS_PATH = DATA_DIR / "settings.json"
 _SECRET_FIELDS = {"llm.api_key", "imap.password"}
 _REDACT_PLACEHOLDER = "****"
 
+# 仅允许保存这些键；其余（尤其 google.credentials_path / token_path 等文件路径）
+# 一律丢弃，避免通过设置接口写入任意路径或污染敏感配置。
+_ALLOWED: dict[str, set[str]] = {
+    "llm": {"api_key", "model", "base_url", "temperature", "max_tokens"},
+    "imap": {"host", "port", "username", "password"},
+    "user": {"name", "email", "tone", "signature"},
+    "google": {"enabled", "calendar_id"},
+    "testing": {"redirect_to"},
+}
+
 
 def _redact(value: str) -> str:
     if not value or len(value) <= 4:
@@ -28,6 +38,17 @@ def _redact(value: str) -> str:
 
 def _is_redacted(value: str) -> bool:
     return value.startswith(_REDACT_PLACEHOLDER)
+
+
+def _sanitize(new_data: dict) -> dict:
+    """仅保留白名单内的 section/key。"""
+    out: dict = {}
+    for section, keys in _ALLOWED.items():
+        if isinstance(new_data.get(section), dict):
+            kept = {k: v for k, v in new_data[section].items() if k in keys}
+            if kept:
+                out[section] = kept
+    return out
 
 
 class SettingsStore:
@@ -42,16 +63,16 @@ class SettingsStore:
         if self._path.exists():
             try:
                 self._data = json.loads(self._path.read_text(encoding="utf-8"))
-            except Exception as e:
+            except (json.JSONDecodeError, OSError) as e:
                 logger.warning("设置加载失败: %s", e)
                 self._data = {}
 
     def _save(self):
-        self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._path.write_text(
-            json.dumps(self._data, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+        """原子写入并设为 0600，避免半写损坏与凭据被他人读取。"""
+        from mail_agent.io_utils import atomic_write_text
+
+        payload = json.dumps(self._data, ensure_ascii=False, indent=2)
+        atomic_write_text(self._path, payload, mode=0o600)
 
     def get_raw(self) -> dict:
         """获取原始设置（含完整密钥）"""
@@ -73,21 +94,16 @@ class SettingsStore:
         return data
 
     def save(self, new_data: dict):
-        """保存设置（处理脱敏占位符）
-
-        如果提交的值是脱敏占位符，保留原始值。
-        """
+        """保存设置：先按白名单清洗键，再处理脱敏占位符（占位符则保留原值）。"""
+        new_data = _sanitize(new_data)
         for field_path in _SECRET_FIELDS:
             parts = field_path.split(".")
-            # 获取新值
             new_obj = new_data
             for p in parts[:-1]:
                 new_obj = new_obj.get(p, {})
             key = parts[-1]
             new_val = new_obj.get(key, "")
-
             if new_val and _is_redacted(new_val):
-                # 保留原始值
                 old_obj = self._data
                 for p in parts[:-1]:
                     old_obj = old_obj.get(p, {})

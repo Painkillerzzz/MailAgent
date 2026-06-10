@@ -39,11 +39,12 @@ class ResultStore:
                 self._results = []
 
     def _save(self):
-        self._path.parent.mkdir(parents=True, exist_ok=True)
+        from mail_agent.io_utils import atomic_write_text
+
         data = [r.model_dump(mode="json") for r in self._results]
-        self._path.write_text(
+        atomic_write_text(
+            self._path,
             json.dumps(data, ensure_ascii=False, indent=2, default=str),
-            encoding="utf-8",
         )
 
     def add(self, result: ProcessingResult):

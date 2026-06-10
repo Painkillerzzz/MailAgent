@@ -74,8 +74,8 @@ async def settings_page(request: Request):
     return templates.TemplateResponse(request=request, name="settings.html")
 
 
-def run_server(host: str = "0.0.0.0", port: int = 8000):
-    """启动 Web 服务器"""
+def run_server(host: str = "127.0.0.1", port: int = 8000):
+    """启动 Web 服务器（默认仅绑定本机回环，避免局域网未授权访问）"""
     import uvicorn
 
     uvicorn.run(web_app, host=host, port=port)

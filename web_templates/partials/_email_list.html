@@ -5,46 +5,70 @@
         <span class="badge badge-{{ r.priority.level.value }}">{{ r.priority.level.value }}</span>
         <span class="email-card-subject">{{ r.email.subject }}</span>
         <span class="email-card-sender">{{ r.email.sender_name or r.email.sender }}</span>
+        {% if r.calendar_event %}<span class="chip chip-cal">日程</span>{% endif %}
+        {% if r.reply_draft %}<span class="chip chip-reply">回复</span>{% endif %}
         <span class="email-card-score">{{ "%.1f"|format(r.priority.total_score) }}</span>
         <span class="email-card-toggle" :class="expanded && 'expanded'">&#9654;</span>
     </div>
+
+    <!-- 摘要：始终可见 -->
+    <div class="email-summary">{{ r.analysis.summary }}</div>
+
     <div class="email-card-details" x-show="expanded" x-cloak>
-        <table style="margin-top: 0.75rem;">
-            <tr><th style="width:130px;">Intent</th><td>{{ r.analysis.intent.value }}</td></tr>
-            <tr><th>Urgency</th><td>{{ r.analysis.urgency.value }}</td></tr>
-            <tr><th>Category</th><td>{{ r.analysis.category.value }}</td></tr>
-            <tr><th>Requires Reply</th><td>{{ r.analysis.requires_reply }}</td></tr>
-            <tr><th>Summary</th><td>{{ r.analysis.summary }}</td></tr>
+        <table style="margin-top: 0.5rem;">
+            <tr><th style="width:120px;">意图</th><td>{{ r.analysis.intent.value }}</td></tr>
+            <tr><th>分类</th><td>{{ r.analysis.category.value }}</td></tr>
+            <tr><th>需要回复</th><td>{{ '是' if r.analysis.requires_reply else '否' }}</td></tr>
             {% if r.analysis.key_points %}
-            <tr><th>Key Points</th><td>{{ r.analysis.key_points | join('; ') }}</td></tr>
+            <tr><th>要点</th><td>{{ r.analysis.key_points | join('；') }}</td></tr>
             {% endif %}
         </table>
 
+        <!-- 事件安排 -->
         {% if r.calendar_event %}
-        <div style="margin-top: 0.75rem; padding: 0.6rem; background: #e8f5e9; border-radius: 4px; font-size: 0.9rem;">
-            <strong>Calendar:</strong> {{ r.calendar_event.title }}
-            ({{ r.calendar_event.start_time.strftime('%Y-%m-%d %H:%M') }} &ndash; {{ r.calendar_event.end_time.strftime('%H:%M') }})
+        <div class="block-cal">
+            <strong>📅 已安排日程：</strong>{{ r.calendar_event.title }}
+            （{{ r.calendar_event.start_time.strftime('%Y-%m-%d %H:%M') }} &ndash; {{ r.calendar_event.end_time.strftime('%H:%M') }}）
+            {% if r.calendar_backend == 'google' %}<span class="badge badge-google">Google Calendar</span>{% endif %}
         </div>
         {% endif %}
 
+        <!-- 冲突 + 建议改期 -->
         {% if r.schedule_conflict and r.schedule_conflict.has_conflict %}
-        <div class="conflict-warning" style="margin-top: 0.5rem;">
-            Conflict with {{ r.schedule_conflict.conflicting_events | length }} event(s)
+        <div class="block-conflict">
+            <strong>⚠️ 与 {{ r.schedule_conflict.conflicting_events | length }} 个已有事件冲突</strong>
+            {% if r.schedule_conflict.conflicting_events %}
+            <div class="conflict-list">
+                {% for c in r.schedule_conflict.conflicting_events %}
+                <span>{{ c.title }} {{ c.start_time.strftime('%H:%M') }}-{{ c.end_time.strftime('%H:%M') }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% if r.schedule_conflict.suggested_slots %}
+            <div class="suggest-slots">
+                <span class="suggest-label">建议改期：</span>
+                {% for s in r.schedule_conflict.suggested_slots %}
+                <span class="slot-pill">{{ s.start_time.strftime('%m-%d %H:%M') }}–{{ s.end_time.strftime('%H:%M') }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
         </div>
         {% endif %}
 
+        <!-- 回复内容 -->
         {% if r.reply_draft %}
+        <div class="reply-head">
+            <strong>✉️ 建议回复</strong> · 收件人 {{ r.reply_draft.to | join(', ') }}
+            {% if r.reply_delivery == 'sent' %}<span class="badge badge-sent">已发送</span>
+            {% elif r.reply_delivery == 'draft' %}<span class="badge badge-draft">已存草稿</span>{% endif %}
+        </div>
         <div class="reply-box">{{ r.reply_draft.body }}</div>
         {% endif %}
-
-        <div style="margin-top: 0.5rem; font-size: 0.75rem; color: #aaa;">
-            {% for step in r.processing_steps %}{{ step }}<br>{% endfor %}
-        </div>
     </div>
 </div>
 {% endfor %}
 {% else %}
 <div class="empty-state">
-    <p>No emails yet. Click <strong>Run Demo</strong> or <strong>Analyze Email</strong> to get started.</p>
+    <p>暂无邮件。点击上方 <strong>拉取并展示</strong> 或 <strong>Run Demo</strong> 开始。</p>
 </div>
 {% endif %}

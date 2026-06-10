@@ -2,6 +2,37 @@
 {% block title %}Emails{% endblock %}
 {% block content %}
 
+<!-- 拉取并展示邮件 -->
+<div class="card" style="margin-bottom: 1rem;" x-data="fetchPanel" x-init="loadStatus()">
+    <div class="card-header">
+        <h3>拉取邮件</h3>
+        <span class="gstatus" :class="status.authorized ? 'gstatus-ok' : 'gstatus-off'"
+              x-text="statusLabel()"></span>
+    </div>
+    <div class="card-body">
+        <p class="text-muted mb-1">
+            从邮箱拉取未读邮件，自动生成<strong>摘要 · 优先级 · 日程安排 · 回复草稿</strong>并在下方展示。
+        </p>
+        <template x-if="status.enabled && !status.authorized">
+            <p class="text-error mb-1">Google 未授权，请在终端运行 <code>uv run mail-agent auth</code>。</p>
+        </template>
+        <div class="form-row" style="align-items:flex-end;">
+            <div class="form-group" style="max-width:140px;">
+                <label>拉取数量</label>
+                <input type="number" x-model.number="opts.limit" min="1" max="50">
+            </div>
+            <div class="form-group" style="align-self:flex-end;">
+                <button class="btn btn-primary" @click="fetchEmails()" :disabled="fetching">
+                    <span x-show="!fetching">拉取并展示</span>
+                    <span x-show="fetching"><span class="spinner" style="width:14px;height:14px;border-width:2px;"></span> 处理中...</span>
+                </button>
+                <span style="margin-left:0.6rem; font-size:0.85rem;" x-text="lastResult"
+                      :class="lastOk ? 'text-success' : 'text-error'"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="grid-2" style="margin-bottom: 1rem;">
     <!-- Run Demo -->
     <div class="card">

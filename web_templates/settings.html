@@ -25,12 +25,18 @@
                         <div class="form-group">
                             <label>Model</label>
                             <select x-model="settings.llm.model">
-                                <option value="glm-5">GLM-5</option>
+                                <option value="glm-4.6">GLM-4.6（Coding Plan）</option>
+                                <option value="glm-4.5">GLM-4.5</option>
+                                <option value="glm-4.5-air">GLM-4.5-Air</option>
                                 <option value="glm-4-plus">GLM-4-Plus</option>
-                                <option value="glm-4-flash">GLM-4-Flash</option>
-                                <option value="glm-4-air">GLM-4-Air</option>
+                                <option value="glm-4-flash">GLM-4-Flash（免费）</option>
                             </select>
                         </div>
+                    </div>
+                    <div class="form-group">
+                        <label>API Base URL <span class="text-muted">（Coding Plan 需用专属端点）</span></label>
+                        <input type="text" x-model="settings.llm.base_url"
+                               placeholder="https://open.bigmodel.cn/api/coding/paas/v4">
                     </div>
                     <div class="form-row">
                         <div class="form-group">
@@ -116,12 +122,33 @@
                 </div>
             </div>
 
-            <!-- Google Account (placeholder) -->
+            <!-- Google Account -->
             <div class="card">
-                <div class="card-header"><h3>Google Account</h3></div>
+                <div class="card-header">
+                    <h3>Google（Gmail + Calendar）</h3>
+                    <span class="gstatus"
+                          :class="settings.google.authorized ? 'gstatus-ok' : (settings.google.enabled ? 'gstatus-warn' : 'gstatus-off')"
+                          x-text="settings.google.authorized ? '已连接' : (settings.google.enabled ? '未授权' : '未启用')"></span>
+                </div>
                 <div class="card-body">
-                    <p class="text-muted mb-1">Google Calendar sync will be available in a future update.</p>
-                    <button class="btn btn-secondary" disabled>Connect Google Account</button>
+                    <table class="status-table">
+                        <tr><th>已启用</th><td x-text="settings.google.enabled ? '是' : '否（设 GOOGLE_ENABLED=true）'"></td></tr>
+                        <tr><th>凭据文件</th><td x-text="settings.google.credentials_exists ? '已就位' : '缺失 credentials.json'"></td></tr>
+                        <tr><th>授权状态</th><td x-text="settings.google.authorized ? '已授权' : '未授权'"></td></tr>
+                    </table>
+                    <div class="form-group" style="margin-top:0.6rem;">
+                        <label>Calendar ID</label>
+                        <input type="text" x-model="settings.google.calendar_id" placeholder="primary">
+                    </div>
+                    <template x-if="!settings.google.authorized && settings.google.enabled">
+                        <p class="text-muted" style="font-size:0.85rem;">
+                            首次使用请在终端运行 <code>uv run mail-agent auth</code> 完成浏览器授权。
+                        </p>
+                    </template>
+                    <button class="btn btn-secondary" @click="checkGoogle()" :disabled="checkingGoogle">
+                        <span x-show="!checkingGoogle">刷新连接状态</span>
+                        <span x-show="checkingGoogle"><span class="spinner" style="width:14px;height:14px;border-width:2px;"></span> 检查中...</span>
+                    </button>
                 </div>
             </div>
 

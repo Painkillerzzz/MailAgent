@@ -2,21 +2,23 @@
 document.addEventListener('alpine:init', () => {
     Alpine.data('settingsApp', () => ({
         settings: {
-            llm: { api_key: '', model: 'glm-5', temperature: 0.7, max_tokens: 1024 },
+            llm: { api_key: '', model: 'glm-4.6', base_url: '', temperature: 0.7, max_tokens: 1024 },
             imap: { host: '', port: 993, username: '', password: '' },
-            user: { name: '', email: '', tone: 'polite and concise', signature: '' }
+            user: { name: '', email: '', tone: 'polite and concise', signature: '' },
+            google: { enabled: false, calendar_id: 'primary', authorized: false, credentials_exists: false },
+            testing: { redirect_to: '' }
         },
         testing: { llm: false, imap: false },
         testResults: { llm: '', llmOk: false, imap: '', imapOk: false },
         saving: false,
         loaded: false,
+        checkingGoogle: false,
 
         async loadSettings() {
             try {
                 const resp = await fetch('/api/settings');
                 const data = await resp.json();
-                // 深合并
-                for (const section of ['llm', 'imap', 'user']) {
+                for (const section of ['llm', 'imap', 'user', 'google', 'testing']) {
                     if (data[section]) {
                         this.settings[section] = { ...this.settings[section], ...data[section] };
                     }
@@ -34,7 +36,11 @@ document.addEventListener('alpine:init', () => {
                 const resp = await fetch('/api/settings/test-llm', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ api_key: this.settings.llm.api_key })
+                    body: JSON.stringify({
+                        api_key: this.settings.llm.api_key,
+                        model: this.settings.llm.model,
+                        base_url: this.settings.llm.base_url
+                    })
                 });
                 const data = await resp.json();
                 this.testResults.llm = data.message;
@@ -67,13 +73,34 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        async checkGoogle() {
+            this.checkingGoogle = true;
+            try {
+                const resp = await fetch('/api/google/status');
+                const d = await resp.json();
+                this.settings.google = { ...this.settings.google, ...d };
+                showToast(d.authorized ? 'Google 已连接' : (d.enabled ? 'Google 未授权' : 'Google 未启用'),
+                          d.authorized ? 'success' : 'info');
+            } catch (e) {
+                showToast('状态检查失败', 'error');
+            } finally {
+                this.checkingGoogle = false;
+            }
+        },
+
         async saveSettings() {
             this.saving = true;
             try {
+                // 不持久化运行时计算字段，避免覆盖实时状态
+                const payload = JSON.parse(JSON.stringify(this.settings));
+                if (payload.google) {
+                    delete payload.google.authorized;
+                    delete payload.google.credentials_exists;
+                }
                 const resp = await fetch('/api/settings', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(this.settings)
+                    body: JSON.stringify(payload)
                 });
                 const data = await resp.json();
                 showToast(data.message, data.success ? 'success' : 'error');

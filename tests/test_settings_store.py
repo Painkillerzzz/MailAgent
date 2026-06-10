@@ -96,6 +96,6 @@ class TestConfigIntegration:
             from mail_agent.config import load_config
 
             config = load_config()
-            assert config.llm.model == "glm-5"
+            assert config.llm.model == "glm-4.6"
         finally:
             cfg.DATA_DIR = original_dir
