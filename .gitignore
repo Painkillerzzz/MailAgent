@@ -21,6 +21,12 @@ wheels/
 # Data files
 data/*.json
 
+# Google OAuth 凭据与 token（切勿提交）
+credentials.json
+client_secret_*.json
+token.json
+data/token.json
+
 # OS
 .DS_Store
 Thumbs.db
