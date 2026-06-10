@@ -25,13 +25,9 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      - name: Run unit tests (no API)
-        run: |
-          uv run pytest tests/test_config.py tests/test_models.py tests/test_email_parser.py tests/test_priority.py tests/test_calendar_store.py tests/test_ics_export.py -v
-
-      - name: Run integration tests
-        if: env.ZAI_API_KEY != ''
+      # 整套测试已做数据隔离；无 ZAI_API_KEY 时依赖真实 LLM 的用例自动跳过。
+      # 配置了 secrets.ZAI_API_KEY 则连同集成用例一起运行。
+      - name: Run tests
         env:
           ZAI_API_KEY: ${{ secrets.ZAI_API_KEY }}
-        run: |
-          uv run pytest tests/ -v
+        run: uv run pytest tests/ -v

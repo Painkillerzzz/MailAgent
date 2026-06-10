@@ -15,11 +15,11 @@ from mail_agent.config import (
 class TestLLMConfig:
     def test_default_model(self):
         config = LLMConfig()
-        assert config.model == "glm-5"
+        assert config.model == "glm-4.6"
 
-    def test_api_key_from_env(self):
-        config = LLMConfig()
-        assert config.api_key  # 应从 .env 加载
+    def test_api_key_from_env(self, monkeypatch):
+        monkeypatch.setenv("ZAI_API_KEY", "test-key-123")
+        assert LLMConfig().api_key == "test-key-123"
 
     def test_custom_values(self):
         config = LLMConfig(model="glm-4", temperature=0.5, max_tokens=2048)
@@ -59,5 +59,7 @@ class TestAppConfig:
 
     def test_nested_defaults(self):
         config = AppConfig()
-        assert config.llm.model == "glm-5"
+        assert config.llm.model == "glm-4.6"
         assert config.calendar.storage_path is not None
+        assert config.google is not None
+        assert config.testing.redirect_to

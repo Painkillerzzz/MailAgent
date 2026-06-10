@@ -9,7 +9,7 @@ from mail_agent.llm.client import LLMClient
 class TestLLMClientInit:
     def test_create_with_valid_key(self):
         client = LLMClient()
-        assert client.model == "glm-5"
+        assert client.model == "glm-4.6"
 
     def test_create_without_key_raises(self):
         config = LLMConfig(api_key="")
