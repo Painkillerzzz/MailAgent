@@ -22,7 +22,10 @@ class LLMClient:
         self._config = config
         if not config.api_key:
             raise ValueError("ZAI_API_KEY 未设置，请在 .env 文件中配置")
-        self._client = ZhipuAI(api_key=config.api_key)
+        if getattr(config, "base_url", ""):
+            self._client = ZhipuAI(api_key=config.api_key, base_url=config.base_url)
+        else:
+            self._client = ZhipuAI(api_key=config.api_key)
 
     @property
     def model(self) -> str:
@@ -77,4 +80,15 @@ class LLMClient:
             # 去掉首尾的 ``` 行
             lines = [l for l in lines if not l.strip().startswith("```")]
             text = "\n".join(lines)
-        return json.loads(text)
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            # 容错：截取第一个 {...} 对象再试
+            start = text.find("{")
+            end = text.rfind("}")
+            if start != -1 and end > start:
+                try:
+                    return json.loads(text[start : end + 1])
+                except json.JSONDecodeError:
+                    pass
+            raise ValueError(f"LLM 未返回可解析的 JSON: {text[:120]!r}")

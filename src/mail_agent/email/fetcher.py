@@ -51,73 +51,34 @@ class IMAPFetcher:
     def __exit__(self, *args):
         self.disconnect()
 
-    def fetch_unread(self, limit: int = 50) -> list[EmailMessage]:
-        """获取未读邮件
-
-        Args:
-            limit: 最多获取的邮件数量
-
-        Returns:
-            EmailMessage 列表
-        """
+    def _search_and_fetch(
+        self, criteria: str, limit: int
+    ) -> list[EmailMessage]:
+        """按 IMAP 搜索条件取最新 limit 封并解析。"""
         if not self._connection:
             raise RuntimeError("未连接到 IMAP 服务器，请先调用 connect()")
 
         self._connection.select(self._config.mailbox)
-        _, data = self._connection.search(None, "UNSEEN")
-
+        _, data = self._connection.search(None, criteria)
         if not data or not data[0]:
             return []
 
-        msg_ids = data[0].split()
-        # 取最新的 limit 条
-        msg_ids = msg_ids[-limit:]
-
+        msg_ids = data[0].split()[-limit:]  # 取最新的 limit 条
         emails = []
         for msg_id in msg_ids:
             try:
                 _, msg_data = self._connection.fetch(msg_id, "(RFC822)")
                 if msg_data and msg_data[0] and isinstance(msg_data[0], tuple):
-                    raw_bytes = msg_data[0][1]
-                    email_msg = parse_raw_email(raw_bytes)
-                    emails.append(email_msg)
-            except Exception as e:
+                    emails.append(parse_raw_email(msg_data[0][1]))
+            except Exception as e:  # noqa: BLE001
                 logger.warning("获取邮件 %s 失败: %s", msg_id, e)
-
-        logger.info("获取了 %d 封未读邮件", len(emails))
+        logger.info("获取了 %d 封邮件 (criteria=%s)", len(emails), criteria)
         return emails
+
+    def fetch_unread(self, limit: int = 50) -> list[EmailMessage]:
+        """获取未读邮件（最多 limit 封）"""
+        return self._search_and_fetch("UNSEEN", limit)
 
     def fetch_all(self, limit: int = 100) -> list[EmailMessage]:
-        """获取所有邮件（含已读）
-
-        Args:
-            limit: 最多获取的邮件数量
-
-        Returns:
-            EmailMessage 列表
-        """
-        if not self._connection:
-            raise RuntimeError("未连接到 IMAP 服务器，请先调用 connect()")
-
-        self._connection.select(self._config.mailbox)
-        _, data = self._connection.search(None, "ALL")
-
-        if not data or not data[0]:
-            return []
-
-        msg_ids = data[0].split()
-        msg_ids = msg_ids[-limit:]
-
-        emails = []
-        for msg_id in msg_ids:
-            try:
-                _, msg_data = self._connection.fetch(msg_id, "(RFC822)")
-                if msg_data and msg_data[0] and isinstance(msg_data[0], tuple):
-                    raw_bytes = msg_data[0][1]
-                    email_msg = parse_raw_email(raw_bytes)
-                    emails.append(email_msg)
-            except Exception as e:
-                logger.warning("获取邮件 %s 失败: %s", msg_id, e)
-
-        logger.info("获取了 %d 封邮件", len(emails))
-        return emails
+        """获取所有邮件（含已读，最多 limit 封）"""
+        return self._search_and_fetch("ALL", limit)

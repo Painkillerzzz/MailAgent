@@ -37,8 +37,20 @@ Rules:
 - "high" urgency: time-sensitive, deadlines within a few days, from important senders
 - "medium" urgency: normal business communication, meetings, tasks
 - "low" urgency: FYI, newsletters, social messages
-- contains_schedule should be true if the email mentions any specific date, time, or scheduling
-- schedule_description should describe the time in a parseable way (e.g., "Thursday at 3pm", "next Tuesday 14:00")
+
+contains_schedule — be STRICT. Set it true ONLY when the email asks THE RECIPIENT to personally attend or act at a specific time, i.e.:
+  - a meeting / call / appointment / interview the recipient is invited to, with a date or time, OR
+  - a concrete deadline the recipient personally must meet (e.g., "submit the report by Friday").
+Set contains_schedule = FALSE (and schedule_description = "") for ALL of the following, even if they mention dates or times:
+  - promotional / marketing / sales emails (e.g., "sale ends March 1", "deal expires soon")
+  - newsletters, digests, recommendations, or event announcements that do NOT require the recipient's personal attendance
+  - job postings / recruiting blasts and their application windows (e.g., "Fall 2026 internship")
+  - automated system notifications, status/incident updates, delivery receipts, security alerts (their timestamps are not appointments)
+  - vague time periods with no specific appointment (e.g., "this fall", "sometime next quarter")
+When in doubt, set contains_schedule = false.
+- schedule_description: only when contains_schedule is true; describe the time in a parseable way (e.g., "Thursday at 3pm", "next Tuesday 14:00"). Otherwise "".
+
+requires_reply — true only when a human sender expects a personal response. Set false for automated/no-reply senders, newsletters, notifications, and promotional mail.
 
 Respond ONLY with the JSON object, no other text."""
 

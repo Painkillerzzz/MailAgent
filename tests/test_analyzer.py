@@ -3,12 +3,83 @@
 import pytest
 
 from mail_agent.models import (
+    EmailAnalysis,
     EmailCategory,
     EmailIntent,
     EmailMessage,
     UrgencyLevel,
 )
-from mail_agent.understanding.analyzer import EmailAnalyzer
+from mail_agent.understanding.analyzer import (
+    ANALYSIS_SYSTEM_PROMPT,
+    EmailAnalyzer,
+)
+
+
+class _FakeLLM:
+    """返回固定 JSON 的假 LLM，用于确定性测试"""
+
+    def __init__(self, payload):
+        self.payload = payload
+        self.last_messages = None
+
+    def chat_json(self, messages, **kwargs):
+        self.last_messages = messages
+        return self.payload
+
+
+class TestEmailAnalyzerUnit:
+    """确定性单测：不依赖网络"""
+
+    def test_maps_fields_from_llm(self):
+        fake = _FakeLLM({
+            "intent": "meeting_request",
+            "urgency": "high",
+            "category": "meeting",
+            "requires_reply": True,
+            "contains_schedule": True,
+            "schedule_description": "Thursday at 3pm",
+            "summary": "meeting",
+            "key_points": ["a", "b"],
+        })
+        analyzer = EmailAnalyzer(fake)
+        result = analyzer.analyze(EmailMessage(subject="x", body="y"))
+        assert result.intent == EmailIntent.MEETING_REQUEST
+        assert result.urgency == UrgencyLevel.HIGH
+        assert result.contains_schedule is True
+        assert result.schedule_description == "Thursday at 3pm"
+        assert result.key_points == ["a", "b"]
+
+    def test_marketing_payload_no_schedule(self):
+        # 即使提到日期，营销邮件应被模型判为无日程（此处验证映射如实透传 false）
+        fake = _FakeLLM({
+            "intent": "notification",
+            "urgency": "low",
+            "category": "notification",
+            "requires_reply": False,
+            "contains_schedule": False,
+            "schedule_description": "",
+            "summary": "promo",
+            "key_points": [],
+        })
+        result = EmailAnalyzer(fake).analyze(EmailMessage(subject="Sale ends March 1"))
+        assert result.contains_schedule is False
+        assert result.schedule_description == ""
+        assert result.requires_reply is False
+
+    def test_invalid_json_returns_safe_default(self):
+        class _BadLLM:
+            def chat_json(self, messages, **kwargs):
+                raise ValueError("bad json")
+
+        result = EmailAnalyzer(_BadLLM()).analyze(EmailMessage(subject="x"))
+        assert isinstance(result, EmailAnalysis)
+        assert "分析失败" in result.summary
+
+    def test_prompt_enforces_strict_schedule(self):
+        # 守护性测试：prompt 必须包含收紧日程判定的关键约束
+        assert "be STRICT" in ANALYSIS_SYSTEM_PROMPT
+        assert "promotional" in ANALYSIS_SYSTEM_PROMPT
+        assert "When in doubt, set contains_schedule = false" in ANALYSIS_SYSTEM_PROMPT
 
 
 class TestEmailAnalyzer:
@@ -100,3 +171,58 @@ class TestEmailAnalyzer:
         result = analyzer.analyze(sample_email_task)
         assert isinstance(result.summary, str)
         assert len(result.summary) > 0
+
+    # ── 收紧日程判定后的回归测试（真实 LLM）──
+
+    def test_marketing_email_no_schedule(self, analyzer):
+        email = EmailMessage(
+            sender="deals@weee.com",
+            sender_name="Weee!",
+            subject="解锁最强劲爆价💌 Sale ends March 1",
+            body=(
+                "限时特惠！新品上架，多款商品补货。"
+                "Big sale — deals expire March 1. 立即抢购，错过再等一年！"
+            ),
+        )
+        result = analyzer.analyze(email)
+        assert result.contains_schedule is False
+        assert result.requires_reply is False
+
+    def test_job_posting_no_schedule(self, analyzer):
+        email = EmailMessage(
+            sender="jobs-noreply@linkedin.com",
+            sender_name="LinkedIn",
+            subject="Machine Learning Intern/Co-op (Fall, 2026) at Cohere",
+            body=(
+                "Based on your profile, here are job recommendations: "
+                "Machine Learning Intern/Co-op (Fall 2026) at Cohere. Apply now."
+            ),
+        )
+        result = analyzer.analyze(email)
+        assert result.contains_schedule is False
+
+    def test_status_notification_no_schedule(self, analyzer):
+        email = EmailMessage(
+            sender="noreply@statuspage.io",
+            sender_name="Statuspage",
+            subject="Incident - Elevated errors",
+            body=(
+                "We are investigating elevated error rates. "
+                "Incident started at 2026-06-05 17:13 UTC. We will update shortly."
+            ),
+        )
+        result = analyzer.analyze(email)
+        assert result.contains_schedule is False
+        assert result.requires_reply is False
+
+    def test_genuine_meeting_still_detected(self, analyzer):
+        # 收紧后真实会议邀约仍应识别为含日程
+        email = EmailMessage(
+            sender="prof.li@tsinghua.edu.cn",
+            sender_name="李教授",
+            subject="下周三的论文讨论",
+            body="方便的话我们下周三下午3点见个面，讨论论文，大概一小时。",
+        )
+        result = analyzer.analyze(email)
+        assert result.contains_schedule is True
+        assert result.requires_reply is True

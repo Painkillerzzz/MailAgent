@@ -130,11 +130,17 @@ def extract_attachments(msg: Message) -> list[str]:
 
 
 def parse_date(msg: Message) -> datetime | None:
-    """解析邮件日期"""
+    """解析邮件日期；无法解析时返回 None（不丢整封邮件）"""
     date_str = msg.get("Date")
     if not date_str:
         return None
-    parsed = email.utils.parsedate_to_datetime(date_str)
+    try:
+        parsed = email.utils.parsedate_to_datetime(date_str)
+    except (ValueError, TypeError):
+        logger.debug("无法解析邮件日期: %r", date_str)
+        return None
+    if parsed is None:
+        return None
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
     return parsed
