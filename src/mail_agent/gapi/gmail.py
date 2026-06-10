@@ -64,14 +64,50 @@ class GmailClient:
             .execute()
         )
         msg_refs = resp.get("messages", [])
+        if not msg_refs:
+            return []
+        ids = [r["id"] for r in msg_refs]
+        # 先尝试一次 batch 并发拉取，缺失的再逐封补齐（保证不丢邮件）
+        got = self._batch_get(ids)
         emails: list[EmailMessage] = []
-        for ref in msg_refs:
-            try:
-                emails.append(self._get_message(ref["id"]))
-            except Exception as e:  # noqa: BLE001
-                logger.warning("获取邮件 %s 失败: %s", ref.get("id"), e)
+        for mid in ids:
+            em = got.get(mid)
+            if em is None:
+                try:
+                    em = self._get_message(mid)
+                except Exception as e:  # noqa: BLE001
+                    logger.warning("获取邮件 %s 失败: %s", mid, e)
+                    continue
+            emails.append(em)
         logger.info("Gmail 获取了 %d 封邮件 (query=%r)", len(emails), query)
         return emails
+
+    def _batch_get(self, ids: list[str]) -> dict[str, EmailMessage]:
+        """用一次 batch HTTP 请求并发拉取多封邮件；失败返回 {} 让调用方逐封补齐。"""
+        collected: dict[str, EmailMessage] = {}
+        try:
+            def _cb(req_id, response, exception):
+                if exception is not None or not response:
+                    return
+                try:
+                    collected[req_id] = self._parse_raw_message(response)
+                except Exception as e:  # noqa: BLE001
+                    logger.warning("解析邮件 %s 失败: %s", req_id, e)
+
+            batch = self._service.new_batch_http_request()
+            for mid in ids:
+                batch.add(
+                    self._service.users().messages().get(
+                        userId="me", id=mid, format="raw"
+                    ),
+                    request_id=mid,
+                    callback=_cb,
+                )
+            batch.execute()
+        except Exception as e:  # noqa: BLE001
+            logger.warning("批量获取失败，回退逐封: %s", e)
+            return {}
+        return collected
 
     def get_message(self, gmail_id: str) -> EmailMessage:
         """按 ID 读回单封邮件（公开接口，用于读写回读验证）"""
@@ -85,9 +121,14 @@ class GmailClient:
             .get(userId="me", id=gmail_id, format="raw")
             .execute()
         )
+        return self._parse_raw_message(msg)
+
+    @staticmethod
+    def _parse_raw_message(msg: dict) -> EmailMessage:
+        """把 Gmail messages.get(format=raw) 的返回解析为 EmailMessage。"""
         raw_bytes = base64.urlsafe_b64decode(msg["raw"].encode("ascii"))
         email_msg = parse_raw_email(raw_bytes)
-        email_msg.gmail_id = msg.get("id", gmail_id)
+        email_msg.gmail_id = msg.get("id", "")
         email_msg.gmail_thread_id = msg.get("threadId", "")
         email_msg.is_read = "UNREAD" not in msg.get("labelIds", [])
         return email_msg

@@ -71,6 +71,55 @@ class TestGmailClient:
         assert emails[0].gmail_thread_id == "t1"
         assert emails[0].is_read is False
 
+    def test_fetch_uses_batch_then_fills_gaps(self, google_config):
+        """batch 命中的直接用结果，未命中的逐封补齐，且保持顺序。"""
+        raw1 = _make_raw_email("First", "a@x.com", "b1", "<m1@x.com>")
+        raw2 = _make_raw_email("Second", "b@x.com", "b2", "<m2@x.com>")
+        service = MagicMock()
+        service.users().messages().list().execute.return_value = {
+            "messages": [{"id": "g1"}, {"id": "g2"}]
+        }
+        # batch 只回调 g1；g2 留给逐封补齐
+        class _FakeBatch:
+            def __init__(self):
+                self._calls = []
+
+            def add(self, request, request_id=None, callback=None):
+                self._calls.append((request_id, callback))
+
+            def execute(self):
+                for rid, cb in self._calls:
+                    if rid == "g1":
+                        cb(rid, {"id": "g1", "threadId": "t1",
+                                 "labelIds": ["INBOX"], "raw": raw1}, None)
+
+        service.new_batch_http_request.return_value = _FakeBatch()
+        # 逐封补齐 g2
+        service.users().messages().get().execute.return_value = {
+            "id": "g2", "threadId": "t2", "labelIds": ["UNREAD"], "raw": raw2,
+        }
+        client = GmailClient(google_config, service=service)
+        emails = client.fetch_unread(limit=10)
+
+        assert [e.subject for e in emails] == ["First", "Second"]
+        assert emails[0].gmail_id == "g1" and emails[0].is_read is True
+        assert emails[1].gmail_id == "g2" and emails[1].is_read is False
+
+    def test_fetch_falls_back_when_batch_raises(self, google_config):
+        """batch 整体抛错时，全部逐封补齐而不丢邮件。"""
+        raw = _make_raw_email("Hello", "a@x.com", "hi", "<m@x.com>")
+        service = MagicMock()
+        service.users().messages().list().execute.return_value = {
+            "messages": [{"id": "g1"}, {"id": "g2"}]
+        }
+        service.new_batch_http_request.side_effect = RuntimeError("no batch")
+        service.users().messages().get().execute.return_value = {
+            "id": "g1", "threadId": "t1", "labelIds": ["UNREAD"], "raw": raw,
+        }
+        client = GmailClient(google_config, service=service)
+        emails = client.fetch_unread(limit=10)
+        assert len(emails) == 2
+
     def test_mark_read_calls_modify(self, google_config):
         service = MagicMock()
         client = GmailClient(google_config, service=service)
