@@ -3,13 +3,37 @@
 import os
 
 from mail_agent.config import (
+    FULL_SCOPES,
+    READONLY_SCOPES,
     AppConfig,
     CalendarConfig,
+    GoogleConfig,
     IMAPConfig,
     LLMConfig,
     UserProfile,
     load_config,
 )
+
+
+class TestGoogleScopes:
+    def test_default_scopes_are_full(self, monkeypatch):
+        monkeypatch.delenv("GOOGLE_SCOPES", raising=False)
+        assert GoogleConfig().scopes == FULL_SCOPES
+
+    def test_readonly_keyword(self, monkeypatch):
+        monkeypatch.setenv("GOOGLE_SCOPES", "readonly")
+        assert GoogleConfig().scopes == READONLY_SCOPES
+
+    def test_explicit_scope_list(self, monkeypatch):
+        monkeypatch.setenv(
+            "GOOGLE_SCOPES",
+            "https://www.googleapis.com/auth/gmail.readonly, "
+            "https://www.googleapis.com/auth/calendar",
+        )
+        assert GoogleConfig().scopes == [
+            "https://www.googleapis.com/auth/gmail.readonly",
+            "https://www.googleapis.com/auth/calendar",
+        ]
 
 
 class TestLLMConfig:

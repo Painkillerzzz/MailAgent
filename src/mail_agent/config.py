@@ -50,6 +50,33 @@ class CalendarConfig(BaseModel):
     search_days: int = 5
 
 
+# 读写全权限（默认，向后兼容现有 token，避免强制重新授权）
+FULL_SCOPES = [
+    "https://www.googleapis.com/auth/gmail.modify",
+    "https://www.googleapis.com/auth/gmail.send",
+    "https://www.googleapis.com/auth/calendar",
+]
+# 仅读权限（可选，给纯展示场景收紧权限用；启用需用户重新授权一次）
+READONLY_SCOPES = [
+    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/calendar.readonly",
+]
+
+
+def _scopes_from_env() -> list[str]:
+    """支持用 GOOGLE_SCOPES 覆盖授权范围（逗号分隔）；默认仍是全权限。
+
+    用户若想收紧为只读，可设 GOOGLE_SCOPES=readonly 或显式给出 scope 列表。
+    注意：更改 scope 会使现有 token 失效、需要重新授权——默认不改动。
+    """
+    raw = os.getenv("GOOGLE_SCOPES", "").strip()
+    if not raw:
+        return list(FULL_SCOPES)
+    if raw.lower() in ("readonly", "read-only", "ro"):
+        return list(READONLY_SCOPES)
+    return [s.strip() for s in raw.split(",") if s.strip()]
+
+
 class GoogleConfig(BaseModel):
     """Google (Gmail + Calendar) OAuth2 配置
 
@@ -80,14 +107,9 @@ class GoogleConfig(BaseModel):
     calendar_id: str = Field(
         default_factory=lambda: os.getenv("GOOGLE_CALENDAR_ID", "primary")
     )
-    # OAuth 授权范围：读写邮件 + 发送 + 日历
-    scopes: list[str] = Field(
-        default_factory=lambda: [
-            "https://www.googleapis.com/auth/gmail.modify",
-            "https://www.googleapis.com/auth/gmail.send",
-            "https://www.googleapis.com/auth/calendar",
-        ]
-    )
+    # OAuth 授权范围：默认全权限（读写邮件 + 发送 + 日历）；
+    # 可用环境变量 GOOGLE_SCOPES 覆盖（如 GOOGLE_SCOPES=readonly）。
+    scopes: list[str] = Field(default_factory=_scopes_from_env)
 
 
 class UserProfile(BaseModel):

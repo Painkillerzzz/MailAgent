@@ -158,8 +158,17 @@ uv run mail-agent web --port 8000
    ```
    浏览器会弹出 Google 授权页，同意后 token 会缓存到 `data/token.json`，之后自动刷新，无需重复授权。
 
-> 授权范围：`gmail.modify`（读/标签/草稿）+ `gmail.send`（发送）+ `calendar`（日历读写）。
+> 授权范围：默认 `gmail.modify`（读/标签/草稿）+ `gmail.send`（发送）+ `calendar`（日历读写）。
 > `credentials.json` 和 `token.json` 已加入 `.gitignore`，请勿提交到仓库。
+
+**收紧授权范围（可选）**：纯展示/只读场景可用 `GOOGLE_SCOPES` 降权，例如
+`GOOGLE_SCOPES=readonly`（等价 `gmail.readonly` + `calendar.readonly`），
+或显式给出逗号分隔的 scope 列表。默认不改动以兼容现有 `token.json`；
+**更改 scope 会使旧 token 失效，需要重新 `auth` 授权一次**。
+
+**密钥落盘**：`data/settings.json` 仅本进程读写，已用 `0600` 权限 + 原子写保存；
+API 返回会对 `api_key`/`password` 做 `****` 脱敏。若不希望密钥落盘，
+可只用环境变量/`.env` 提供（不在 Web 设置页填写敏感字段）。
 
 完成后，`fetch` / `calendar` 命令及 Web 仪表板会自动切换到真实的 Gmail 与 Google Calendar。
 
