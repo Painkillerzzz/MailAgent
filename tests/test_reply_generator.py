@@ -119,3 +119,61 @@ class TestReplyGenerator:
         reply = generator.generate(email, analysis)
         assert "Zhang San" in reply.body
         assert "PhD Student" in reply.body
+
+
+# ── 改期建议注入（确定性，不调用真实 LLM）──
+
+
+class _CaptureLLM:
+    """捕获传给 LLM 的 messages，返回固定回复"""
+
+    def __init__(self):
+        self.messages = None
+
+    def chat(self, messages, **kwargs):
+        self.messages = messages
+        return "Thanks, one of those times works."
+
+
+class TestReplySuggestedSlots:
+    def _gen(self):
+        llm = _CaptureLLM()
+        return ReplyGenerator(llm, UserProfile(name="Xiangyu")), llm
+
+    def _conflict_with_slots(self):
+        from mail_agent.models import TimeSlot
+        ev = CalendarEvent(
+            title="Existing",
+            start_time=datetime(2026, 6, 10, 15, 0),
+            end_time=datetime(2026, 6, 10, 16, 0),
+        )
+        return ScheduleConflict(
+            has_conflict=True,
+            conflicting_events=[ev],
+            suggested_slots=[
+                TimeSlot(start_time=datetime(2026, 6, 10, 11, 0),
+                         end_time=datetime(2026, 6, 10, 12, 0)),
+                TimeSlot(start_time=datetime(2026, 6, 10, 16, 0),
+                         end_time=datetime(2026, 6, 10, 17, 0)),
+            ],
+        )
+
+    def test_free_slots_injected_into_prompt(self):
+        gen, llm = self._gen()
+        email = EmailMessage(subject="Meet?", sender="prof@x.edu",
+                             body="Can we meet at 3pm?")
+        analysis = EmailAnalysis(requires_reply=True, contains_schedule=True)
+        gen.generate(email, analysis, conflict=self._conflict_with_slots())
+        user_msg = llm.messages[-1]["content"]
+        assert "FREE on the user's calendar" in user_msg
+        assert "2026-06-10 11:00" in user_msg
+        assert "2026-06-10 16:00" in user_msg
+
+    def test_no_slots_falls_back_to_generic(self):
+        gen, llm = self._gen()
+        email = EmailMessage(subject="Meet?", sender="p@x.edu", body="3pm?")
+        analysis = EmailAnalysis(requires_reply=True, contains_schedule=True)
+        conflict = ScheduleConflict(has_conflict=True, conflicting_events=[])
+        gen.generate(email, analysis, conflict=conflict)
+        user_msg = llm.messages[-1]["content"]
+        assert "Suggest an alternative time" in user_msg
