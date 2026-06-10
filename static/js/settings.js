@@ -25,7 +25,7 @@ document.addEventListener('alpine:init', () => {
                 }
                 this.loaded = true;
             } catch (e) {
-                showToast('Failed to load settings', 'error');
+                showToast('加载设置失败', 'error');
             }
         },
 
@@ -46,7 +46,7 @@ document.addEventListener('alpine:init', () => {
                 this.testResults.llm = data.message;
                 this.testResults.llmOk = data.success;
             } catch (e) {
-                this.testResults.llm = 'Request failed';
+                this.testResults.llm = '请求失败';
                 this.testResults.llmOk = false;
             } finally {
                 this.testing.llm = false;
@@ -66,7 +66,7 @@ document.addEventListener('alpine:init', () => {
                 this.testResults.imap = data.message;
                 this.testResults.imapOk = data.success;
             } catch (e) {
-                this.testResults.imap = 'Request failed';
+                this.testResults.imap = '请求失败';
                 this.testResults.imapOk = false;
             } finally {
                 this.testing.imap = false;
@@ -105,7 +105,7 @@ document.addEventListener('alpine:init', () => {
                 const data = await resp.json();
                 showToast(data.message, data.success ? 'success' : 'error');
             } catch (e) {
-                showToast('Save failed', 'error');
+                showToast('保存失败', 'error');
             } finally {
                 this.saving = false;
             }

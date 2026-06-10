@@ -19,12 +19,13 @@ document.addEventListener('alpine:init', () => {
                     right: 'dayGridMonth,timeGridWeek,timeGridDay'
                 },
                 buttonText: {
-                    today: 'Today',
-                    month: 'Month',
-                    week: 'Week',
-                    day: 'Day'
+                    today: '今天',
+                    month: '月',
+                    week: '周',
+                    day: '日'
                 },
                 events: '/api/calendar/events',
+                eventSourceFailure: () => showToast('日历加载失败', 'error'),
                 eventClick: (info) => {
                     info.jsEvent.preventDefault();
                     const props = info.event.extendedProps || {};
@@ -41,8 +42,8 @@ document.addEventListener('alpine:init', () => {
                     this.showModal = true;
                 },
                 eventDidMount: (info) => {
-                    if (info.event.extendedProps.has_conflict) {
-                        info.el.style.borderLeft = '4px solid #e74c3c';
+                    if (info.event.extendedProps && info.event.extendedProps.has_conflict) {
+                        info.el.style.borderLeft = '4px solid var(--color-danger)';
                     }
                 }
             });
@@ -62,7 +63,7 @@ document.addEventListener('alpine:init', () => {
                     this.showModal = false;
                 }
             } catch (e) {
-                showToast('Delete failed', 'error');
+                showToast('删除失败', 'error');
             }
         }
     }));

@@ -71,13 +71,13 @@ class TestPageRoutes:
     def test_reminders_page(self, client):
         resp = client.get("/reminders")
         assert resp.status_code == 200
-        assert "Urgent Emails" in resp.text
+        assert "紧急邮件" in resp.text
 
     def test_settings_page(self, client):
         resp = client.get("/settings")
         assert resp.status_code == 200
         assert "settings.js" in resp.text
-        assert "API Key" in resp.text
+        assert "API 密钥" in resp.text
 
     def test_static_css(self, client):
         resp = client.get("/static/css/main.css")

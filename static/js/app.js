@@ -9,23 +9,6 @@ function showToast(message, type = 'info', duration = 5000) {
     setTimeout(() => toast.remove(), duration);
 }
 
-/* ── HTMX 事件：监听服务端 HX-Trigger 触发 Toast ── */
-document.addEventListener('showToast', function(evt) {
-    const detail = evt.detail || {};
-    showToast(detail.message || 'Done', detail.type || 'info');
-});
-
-/* ── HTMX 全局事件 ── */
-document.addEventListener('htmx:afterRequest', function(evt) {
-    // POST 请求成功后刷新邮件列表
-    if (evt.detail.requestConfig && evt.detail.requestConfig.verb === 'post') {
-        const emailList = document.getElementById('email-list');
-        if (emailList) {
-            htmx.trigger(emailList, 'refresh');
-        }
-    }
-});
-
 /* ── Alpine.js: 真实邮件拉取面板 ── */
 document.addEventListener('alpine:init', () => {
     Alpine.data('fetchPanel', () => ({

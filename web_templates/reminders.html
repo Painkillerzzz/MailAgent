@@ -1,39 +1,45 @@
 {% extends "base.html" %}
-{% block title %}Reminders{% endblock %}
+{% block title %}提醒{% endblock %}
 {% block content %}
 
 <div class="grid-3">
-    <!-- Urgent Emails -->
+    <!-- 紧急邮件 -->
     <div class="card">
-        <div class="card-header"><h3>Urgent Emails</h3></div>
+        <div class="card-header">
+            <h3>紧急邮件</h3>
+            <span class="htmx-indicator"><span class="spinner" style="width:16px;height:16px;border-width:2px;"></span></span>
+        </div>
         <div class="card-body"
              hx-get="/api/reminders/partial?section=urgent"
              hx-trigger="load, every 30s"
-             hx-swap="innerHTML">
-            <div class="htmx-indicator"><div class="spinner"></div></div>
-        </div>
+             hx-swap="innerHTML"
+             hx-indicator="closest .card"></div>
     </div>
 
-    <!-- Upcoming Deadlines -->
+    <!-- 即将到期 -->
     <div class="card">
-        <div class="card-header"><h3>Upcoming Deadlines</h3></div>
+        <div class="card-header">
+            <h3>即将到期</h3>
+            <span class="htmx-indicator"><span class="spinner" style="width:16px;height:16px;border-width:2px;"></span></span>
+        </div>
         <div class="card-body"
              hx-get="/api/reminders/partial?section=deadlines"
              hx-trigger="load, every 60s"
-             hx-swap="innerHTML">
-            <div class="htmx-indicator"><div class="spinner"></div></div>
-        </div>
+             hx-swap="innerHTML"
+             hx-indicator="closest .card"></div>
     </div>
 
-    <!-- Today's Schedule -->
+    <!-- 今日日程 -->
     <div class="card">
-        <div class="card-header"><h3>Today's Schedule</h3></div>
+        <div class="card-header">
+            <h3>今日日程</h3>
+            <span class="htmx-indicator"><span class="spinner" style="width:16px;height:16px;border-width:2px;"></span></span>
+        </div>
         <div class="card-body"
              hx-get="/api/reminders/partial?section=today"
              hx-trigger="load, every 60s"
-             hx-swap="innerHTML">
-            <div class="htmx-indicator"><div class="spinner"></div></div>
-        </div>
+             hx-swap="innerHTML"
+             hx-indicator="closest .card"></div>
     </div>
 </div>
 

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Emails{% endblock %}
+{% block title %}邮件{% endblock %}
 {% block content %}
 
 <!-- 拉取并展示邮件 -->
@@ -18,13 +18,13 @@
         </template>
         <div class="form-row" style="align-items:flex-end;">
             <div class="form-group" style="max-width:140px;">
-                <label>拉取数量</label>
-                <input type="number" x-model.number="opts.limit" min="1" max="50">
+                <label for="fetch-limit">拉取数量</label>
+                <input id="fetch-limit" type="number" x-model.number="opts.limit" min="1" max="50">
             </div>
             <div class="form-group" style="align-self:flex-end;">
                 <button class="btn btn-primary" @click="fetchEmails()" :disabled="fetching">
                     <span x-show="!fetching">拉取并展示</span>
-                    <span x-show="fetching"><span class="spinner" style="width:14px;height:14px;border-width:2px;"></span> 处理中...</span>
+                    <span x-show="fetching"><span class="spinner" style="width:14px;height:14px;border-width:2px;"></span> 处理中…</span>
                 </button>
                 <span style="margin-left:0.6rem; font-size:0.85rem;" x-text="lastResult"
                       :class="lastOk ? 'text-success' : 'text-error'"></span>
@@ -34,103 +34,103 @@
 </div>
 
 <div class="grid-2" style="margin-bottom: 1rem;">
-    <!-- Run Demo -->
+    <!-- 演示 -->
     <div class="card">
-        <div class="card-header"><h3>Demo</h3></div>
+        <div class="card-header"><h3>演示</h3></div>
         <div class="card-body">
-            <p class="text-muted mb-1">Process 3 sample emails to see the agent in action.</p>
+            <p class="text-muted mb-1">处理 3 封示例邮件，快速预览代理效果。</p>
             <button class="btn btn-primary"
                     hx-post="/api/demo"
-                    hx-target="#email-list"
-                    hx-swap="innerHTML"
-                    hx-on::after-request="if(event.detail.successful) { showToast('Demo processed', 'success'); htmx.ajax('GET', '/api/emails/partial', '#email-list'); }">
-                Run Demo
+                    hx-swap="none"
+                    hx-on::after-request="if(event.detail.successful){ showToast('已处理演示邮件', 'success'); htmx.ajax('GET', '/api/emails/partial', '#email-list'); } else { showToast('演示处理失败', 'error'); }">
+                运行演示
             </button>
         </div>
     </div>
 
-    <!-- Analyze Email -->
+    <!-- 分析邮件 -->
     <div class="card" x-data="{ showForm: false }">
-        <div class="card-header" style="cursor:pointer" @click="showForm = !showForm">
-            <h3>Analyze Email</h3>
-            <span x-text="showForm ? '−' : '+'" style="font-size:1.2rem;"></span>
+        <div class="card-header" style="cursor:pointer" role="button" tabindex="0"
+             :aria-expanded="showForm" @click="showForm = !showForm"
+             @keydown.enter.prevent="showForm = !showForm" @keydown.space.prevent="showForm = !showForm">
+            <h3>分析邮件</h3>
+            <span x-text="showForm ? '−' : '+'" style="font-size:1.2rem;" aria-hidden="true"></span>
         </div>
         <div class="card-body" x-show="showForm" x-cloak>
             <form hx-post="/api/emails/process"
-                  hx-target="#email-list"
-                  hx-swap="innerHTML"
-                  hx-on::after-request="if(event.detail.successful) { showToast('Analysis complete', 'success'); htmx.ajax('GET', '/api/emails/partial', '#email-list'); }">
+                  hx-swap="none"
+                  hx-on::after-request="if(event.detail.successful){ showToast('分析完成', 'success'); htmx.ajax('GET', '/api/emails/partial', '#email-list'); this.reset(); } else { showToast('分析失败', 'error'); }">
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Sender Name</label>
-                        <input type="text" name="sender_name" placeholder="Prof. Lee">
+                        <label for="an-sender-name">发件人姓名</label>
+                        <input id="an-sender-name" type="text" name="sender_name" placeholder="李教授">
                     </div>
                     <div class="form-group">
-                        <label>Sender Email</label>
-                        <input type="email" name="sender" placeholder="lee@university.edu" required>
+                        <label for="an-sender">发件人邮箱</label>
+                        <input id="an-sender" type="email" name="sender" placeholder="lee@university.edu" required>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Subject</label>
-                    <input type="text" name="subject" placeholder="Meeting request" required>
+                    <label for="an-subject">主题</label>
+                    <input id="an-subject" type="text" name="subject" placeholder="会议邀约" required>
                 </div>
                 <div class="form-group">
-                    <label>Body</label>
-                    <textarea name="body" placeholder="Email body..." required></textarea>
+                    <label for="an-body">正文</label>
+                    <textarea id="an-body" name="body" placeholder="邮件正文…" required></textarea>
                 </div>
-                <button type="submit" class="btn btn-success">Analyze</button>
+                <button type="submit" class="btn btn-success">分析</button>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Filter Bar -->
+<!-- 筛选栏 -->
 <div class="filter-bar"
      hx-get="/api/emails/partial"
-     hx-trigger="change from:find select, change from:find input"
+     hx-trigger="change, keyup changed delay:300ms from:find input[name='search']"
      hx-target="#email-list"
      hx-swap="innerHTML"
      hx-include="find select, find input">
-    <label>Urgency</label>
-    <select name="urgency">
-        <option value="">All</option>
-        <option value="critical">Critical</option>
-        <option value="high">High</option>
-        <option value="medium">Medium</option>
-        <option value="low">Low</option>
+    <label>紧急度</label>
+    <select name="urgency" aria-label="按紧急度筛选">
+        <option value="">全部</option>
+        <option value="critical">紧急</option>
+        <option value="high">高</option>
+        <option value="medium">中</option>
+        <option value="low">低</option>
     </select>
 
-    <label>Category</label>
-    <select name="category">
-        <option value="">All</option>
-        <option value="meeting">Meeting</option>
-        <option value="task">Task</option>
-        <option value="cooperation">Cooperation</option>
-        <option value="notification">Notification</option>
-        <option value="social">Social</option>
-        <option value="other">Other</option>
+    <label>分类</label>
+    <select name="category" aria-label="按分类筛选">
+        <option value="">全部</option>
+        <option value="meeting">会议</option>
+        <option value="task">任务</option>
+        <option value="cooperation">合作</option>
+        <option value="notification">通知</option>
+        <option value="social">社交</option>
+        <option value="other">其他</option>
     </select>
 
-    <label>Sort</label>
-    <select name="sort_by">
-        <option value="priority">Priority Score</option>
-        <option value="date">Date</option>
+    <label>排序</label>
+    <select name="sort_by" aria-label="排序字段">
+        <option value="priority">优先级</option>
+        <option value="date">日期</option>
     </select>
-    <select name="order">
-        <option value="desc">Desc</option>
-        <option value="asc">Asc</option>
+    <select name="order" aria-label="排序方向">
+        <option value="desc">降序</option>
+        <option value="asc">升序</option>
     </select>
 
-    <input type="text" name="search" placeholder="Search..." style="flex:1; min-width:120px;"
-           hx-trigger="keyup changed delay:300ms">
+    <input type="text" name="search" placeholder="搜索…" aria-label="搜索邮件"
+           style="flex:1; min-width:120px;">
 </div>
 
-<!-- Email List -->
+<!-- 邮件列表 -->
 <div id="email-list"
      hx-get="/api/emails/partial"
      hx-trigger="load, refresh"
      hx-swap="innerHTML">
-    <div class="htmx-indicator"><div class="spinner"></div> Loading...</div>
+    <div class="htmx-indicator"><div class="spinner"></div> 加载中…</div>
 </div>
 
 {% endblock %}

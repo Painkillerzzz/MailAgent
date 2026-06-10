@@ -1,57 +1,60 @@
 {% extends "base.html" %}
-{% block title %}Summary{% endblock %}
+{% block title %}摘要{% endblock %}
 {% block content %}
 
-<div x-data="{ stats: null, briefing: '', loadingBriefing: false, loaded: false }" x-init="
-    fetch('/api/summary').then(r => r.json()).then(d => { stats = d; loaded = true; });
+<div x-data="{ stats: null, briefing: '', loadingBriefing: false, loaded: false, loadError: false }" x-init="
+    fetch('/api/summary')
+        .then(r => { if (!r.ok) throw new Error('http'); return r.json(); })
+        .then(d => { stats = d; loaded = true; })
+        .catch(() => { loaded = true; loadError = true; showToast('加载摘要失败', 'error'); });
 ">
 
-    <!-- Stats Cards -->
-    <template x-if="loaded">
+    <!-- 统计卡片 -->
+    <template x-if="loaded && !loadError">
         <div>
-            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.75rem; margin-bottom: 1.5rem;">
+            <div class="stat-grid">
                 <div class="card">
                     <div class="card-body text-center">
-                        <div style="font-size: 2rem; font-weight: 700; color: var(--color-primary);" x-text="stats.total"></div>
-                        <div class="text-muted" style="font-size: 0.8rem;">Total Emails</div>
+                        <div class="stat-num" style="color: var(--color-primary);" x-text="stats.total"></div>
+                        <div class="text-muted" style="font-size: 0.8rem;">邮件总数</div>
                     </div>
                 </div>
                 <div class="card">
                     <div class="card-body text-center">
-                        <div style="font-size: 2rem; font-weight: 700; color: var(--color-danger);" x-text="stats.urgent"></div>
-                        <div class="text-muted" style="font-size: 0.8rem;">Urgent</div>
+                        <div class="stat-num" style="color: var(--color-danger);" x-text="stats.urgent"></div>
+                        <div class="text-muted" style="font-size: 0.8rem;">紧急</div>
                     </div>
                 </div>
                 <div class="card">
                     <div class="card-body text-center">
-                        <div style="font-size: 2rem; font-weight: 700; color: var(--color-warning);" x-text="stats.needs_reply"></div>
-                        <div class="text-muted" style="font-size: 0.8rem;">Needs Reply</div>
+                        <div class="stat-num" style="color: var(--color-warning);" x-text="stats.needs_reply"></div>
+                        <div class="text-muted" style="font-size: 0.8rem;">待回复</div>
                     </div>
                 </div>
                 <div class="card">
                     <div class="card-body text-center">
-                        <div style="font-size: 2rem; font-weight: 700; color: var(--color-primary);" x-text="stats.meetings"></div>
-                        <div class="text-muted" style="font-size: 0.8rem;">Meetings</div>
+                        <div class="stat-num" style="color: var(--color-primary);" x-text="stats.meetings"></div>
+                        <div class="text-muted" style="font-size: 0.8rem;">会议</div>
                     </div>
                 </div>
                 <div class="card">
                     <div class="card-body text-center">
-                        <div style="font-size: 2rem; font-weight: 700; color: var(--color-success);" x-text="stats.tasks"></div>
-                        <div class="text-muted" style="font-size: 0.8rem;">Tasks</div>
+                        <div class="stat-num" style="color: var(--color-success);" x-text="stats.tasks"></div>
+                        <div class="text-muted" style="font-size: 0.8rem;">任务</div>
                     </div>
                 </div>
             </div>
 
             <div class="grid-2">
-                <!-- By Category -->
+                <!-- 按分类 -->
                 <div class="card">
-                    <div class="card-header"><h3>By Category</h3></div>
+                    <div class="card-header"><h3>按分类</h3></div>
                     <div class="card-body">
                         <template x-if="stats.by_category && Object.keys(stats.by_category).length > 0">
                             <table>
-                                <thead><tr><th>Category</th><th style="text-align:right;">Count</th></tr></thead>
+                                <thead><tr><th>分类</th><th style="text-align:right;">数量</th></tr></thead>
                                 <tbody>
-                                    <template x-for="[cat, count] in Object.entries(stats.by_category).sort((a,b) => b[1]-a[1])">
+                                    <template x-for="[cat, count] in Object.entries(stats.by_category).sort((a,b) => b[1]-a[1])" :key="cat">
                                         <tr>
                                             <td x-text="cat" style="text-transform: capitalize;"></td>
                                             <td style="text-align:right;" x-text="count"></td>
@@ -61,20 +64,20 @@
                             </table>
                         </template>
                         <template x-if="!stats.by_category || Object.keys(stats.by_category).length === 0">
-                            <p class="text-muted text-center" style="padding:1rem;">No data</p>
+                            <p class="text-muted text-center" style="padding:1rem;">暂无数据</p>
                         </template>
                     </div>
                 </div>
 
-                <!-- By Urgency -->
+                <!-- 按紧急度 -->
                 <div class="card">
-                    <div class="card-header"><h3>By Urgency</h3></div>
+                    <div class="card-header"><h3>按紧急度</h3></div>
                     <div class="card-body">
                         <template x-if="stats.by_urgency && Object.keys(stats.by_urgency).length > 0">
                             <table>
-                                <thead><tr><th>Urgency</th><th style="text-align:right;">Count</th></tr></thead>
+                                <thead><tr><th>紧急度</th><th style="text-align:right;">数量</th></tr></thead>
                                 <tbody>
-                                    <template x-for="[urg, count] in Object.entries(stats.by_urgency)">
+                                    <template x-for="[urg, count] in Object.entries(stats.by_urgency)" :key="urg">
                                         <tr>
                                             <td><span class="badge" :class="'badge-' + urg" x-text="urg"></span></td>
                                             <td style="text-align:right;" x-text="count"></td>
@@ -84,25 +87,25 @@
                             </table>
                         </template>
                         <template x-if="!stats.by_urgency || Object.keys(stats.by_urgency).length === 0">
-                            <p class="text-muted text-center" style="padding:1rem;">No data</p>
+                            <p class="text-muted text-center" style="padding:1rem;">暂无数据</p>
                         </template>
                     </div>
                 </div>
             </div>
 
-            <!-- AI Briefing -->
+            <!-- AI 简报 -->
             <div class="card" style="margin-top: 1rem;">
                 <div class="card-header">
-                    <h3>AI Briefing</h3>
+                    <h3>AI 简报</h3>
                     <button class="btn btn-primary" @click="
                         loadingBriefing = true;
                         fetch('/api/summary/briefing').then(r => r.json()).then(d => {
                             briefing = d.briefing;
                             loadingBriefing = false;
-                        }).catch(() => { loadingBriefing = false; });
+                        }).catch(() => { loadingBriefing = false; showToast('生成简报失败', 'error'); });
                     " :disabled="loadingBriefing || stats.total === 0">
-                        <span x-show="!loadingBriefing">Generate Briefing</span>
-                        <span x-show="loadingBriefing"><span class="spinner" style="width:14px;height:14px;border-width:2px;"></span> Generating...</span>
+                        <span x-show="!loadingBriefing">生成简报</span>
+                        <span x-show="loadingBriefing"><span class="spinner" style="width:14px;height:14px;border-width:2px;"></span> 生成中…</span>
                     </button>
                 </div>
                 <div class="card-body">
@@ -110,12 +113,11 @@
                         <div style="white-space: pre-wrap; line-height: 1.7; font-size: 0.9rem;" x-text="briefing"></div>
                     </template>
                     <template x-if="!briefing && !loadingBriefing">
-                        <p class="text-muted text-center" style="padding: 1rem;">
-                            Click "Generate Briefing" to get an AI-powered email summary.
-                        </p>
+                        <p class="text-muted text-center" style="padding: 1rem;"
+                           x-text="stats.total === 0 ? '暂无邮件可生成简报，请先在邮件页拉取或处理邮件。' : '点击「生成简报」获取 AI 邮件摘要。'"></p>
                     </template>
                     <template x-if="loadingBriefing">
-                        <div class="text-center" style="padding: 2rem;"><div class="spinner"></div> Generating AI briefing...</div>
+                        <div class="text-center" style="padding: 2rem;"><div class="spinner"></div> 正在生成 AI 简报…</div>
                     </template>
                 </div>
             </div>
@@ -123,7 +125,11 @@
     </template>
 
     <template x-if="!loaded">
-        <div class="text-center" style="padding: 3rem;"><div class="spinner"></div> Loading summary...</div>
+        <div class="text-center" style="padding: 3rem;"><div class="spinner"></div> 正在加载摘要…</div>
+    </template>
+
+    <template x-if="loadError">
+        <div class="empty-state"><p>加载摘要失败，请稍后重试。</p></div>
     </template>
 
 </div>

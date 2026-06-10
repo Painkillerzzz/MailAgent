@@ -6,22 +6,27 @@
     <title>Mail Agent - {% block title %}Dashboard{% endblock %}</title>
     <link rel="stylesheet" href="/static/css/main.css">
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-    <script defer src="https://unpkg.com/alpinejs@3.14.8/dist/cdn.min.js"></script>
+    <!-- 先加载本页脚本（注册 Alpine.data + alpine:init 监听），最后再加载 Alpine，
+         确保 alpine:init 触发时组件已注册。三者都用 defer 保持文档顺序执行。 -->
     <script defer src="/static/js/app.js"></script>
     {% block extra_head %}{% endblock %}
+    <script defer src="https://unpkg.com/alpinejs@3.14.8/dist/cdn.min.js"></script>
 </head>
 <body>
     <nav class="navbar">
         <h1>Mail Agent</h1>
-        <span class="nav-gdot" x-data="googleStatusDot" :class="'gdot-'+state" :title="title"></span>
-        <a href="/">Emails</a>
-        <a href="/calendar">Calendar</a>
-        <a href="/reminders" x-data="badgeCounter" x-init="startPolling()" style="position:relative;">
-            Reminders
+        <span class="nav-gdot" x-data="googleStatusDot" :class="'gdot-'+state" :title="title"
+              role="img" :aria-label="title"></span>
+        {% set path = request.url.path %}
+        <a href="/" class="{{ 'active' if path == '/' }}">邮件</a>
+        <a href="/calendar" class="{{ 'active' if path == '/calendar' }}">日历</a>
+        <a href="/reminders" class="{{ 'active' if path == '/reminders' }}"
+           x-data="badgeCounter" x-init="startPolling()" aria-label="提醒" style="position:relative;">
+            提醒
             <span x-show="count > 0" x-text="count" class="badge-notify" x-cloak></span>
         </a>
-        <a href="/summary">Summary</a>
-        <a href="/settings">Settings</a>
+        <a href="/summary" class="{{ 'active' if path == '/summary' }}">摘要</a>
+        <a href="/settings" class="{{ 'active' if path == '/settings' }}">设置</a>
     </nav>
     <div class="container">
         {% block content %}{% endblock %}

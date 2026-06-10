@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Settings{% endblock %}
+{% block title %}设置{% endblock %}
 {% block extra_head %}
 <script defer src="/static/js/settings.js"></script>
 {% endblock %}
@@ -8,23 +8,24 @@
 <div x-data="settingsApp" x-init="loadSettings()">
 
     <template x-if="!loaded">
-        <div class="text-center" style="padding: 3rem;"><div class="spinner"></div> Loading settings...</div>
+        <div class="text-center" style="padding: 3rem;"><div class="spinner"></div> 正在加载设置…</div>
     </template>
 
     <template x-if="loaded">
         <div>
-            <!-- LLM Configuration -->
+            <!-- LLM 配置 -->
             <div class="card">
-                <div class="card-header"><h3>LLM Configuration</h3></div>
+                <div class="card-header"><h3>LLM 配置</h3></div>
                 <div class="card-body">
                     <div class="form-row">
                         <div class="form-group">
-                            <label>API Key</label>
-                            <input type="password" x-model="settings.llm.api_key" placeholder="Enter ZhipuAI API key">
+                            <label for="set-api-key">API 密钥</label>
+                            <input id="set-api-key" type="password" x-model="settings.llm.api_key" placeholder="输入智谱 API 密钥">
+                            <p class="text-muted" style="font-size:0.78rem; margin-top:0.25rem;">留空或保持 **** 表示不修改</p>
                         </div>
                         <div class="form-group">
-                            <label>Model</label>
-                            <select x-model="settings.llm.model">
+                            <label for="set-model">模型</label>
+                            <select id="set-model" x-model="settings.llm.model">
                                 <option value="glm-4.6">GLM-4.6（Coding Plan）</option>
                                 <option value="glm-4.5">GLM-4.5</option>
                                 <option value="glm-4.5-air">GLM-4.5-Air</option>
@@ -34,23 +35,23 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>API Base URL <span class="text-muted">（Coding Plan 需用专属端点）</span></label>
-                        <input type="text" x-model="settings.llm.base_url"
+                        <label for="set-base-url">API 接口地址 <span class="text-muted">（Coding Plan 需用专属端点）</span></label>
+                        <input id="set-base-url" type="text" x-model="settings.llm.base_url"
                                placeholder="https://open.bigmodel.cn/api/coding/paas/v4">
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Temperature: <span x-text="settings.llm.temperature"></span></label>
-                            <input type="range" min="0" max="1" step="0.1" x-model="settings.llm.temperature">
+                            <label for="set-temp">温度：<span x-text="settings.llm.temperature"></span></label>
+                            <input id="set-temp" type="range" min="0" max="1" step="0.1" x-model="settings.llm.temperature">
                         </div>
                         <div class="form-group">
-                            <label>Max Tokens</label>
-                            <input type="number" x-model.number="settings.llm.max_tokens" min="128" max="8192">
+                            <label for="set-maxtok">最大 Token</label>
+                            <input id="set-maxtok" type="number" x-model.number="settings.llm.max_tokens" min="128" max="8192">
                         </div>
                     </div>
                     <button class="btn btn-secondary" @click="testLLM()" :disabled="testing.llm">
-                        <span x-show="!testing.llm">Test API Key</span>
-                        <span x-show="testing.llm"><span class="spinner" style="width:14px;height:14px;border-width:2px;"></span> Testing...</span>
+                        <span x-show="!testing.llm">测试 API 密钥</span>
+                        <span x-show="testing.llm"><span class="spinner" style="width:14px;height:14px;border-width:2px;"></span> 测试中…</span>
                     </button>
                     <span class="mt-1" style="margin-left: 0.5rem; font-size: 0.85rem;"
                           x-show="testResults.llm" x-text="testResults.llm"
@@ -58,33 +59,33 @@
                 </div>
             </div>
 
-            <!-- IMAP Configuration -->
+            <!-- IMAP 邮箱配置 -->
             <div class="card">
-                <div class="card-header"><h3>IMAP Email Configuration</h3></div>
+                <div class="card-header"><h3>IMAP 邮箱配置</h3></div>
                 <div class="card-body">
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Host</label>
-                            <input type="text" x-model="settings.imap.host" placeholder="imap.gmail.com">
+                            <label for="set-imap-host">主机</label>
+                            <input id="set-imap-host" type="text" x-model="settings.imap.host" placeholder="imap.gmail.com">
                         </div>
                         <div class="form-group">
-                            <label>Port</label>
-                            <input type="number" x-model.number="settings.imap.port" placeholder="993">
+                            <label for="set-imap-port">端口</label>
+                            <input id="set-imap-port" type="number" x-model.number="settings.imap.port" placeholder="993">
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Username</label>
-                            <input type="text" x-model="settings.imap.username" placeholder="your_email@gmail.com">
+                            <label for="set-imap-user">用户名</label>
+                            <input id="set-imap-user" type="text" x-model="settings.imap.username" placeholder="your_email@gmail.com">
                         </div>
                         <div class="form-group">
-                            <label>Password</label>
-                            <input type="password" x-model="settings.imap.password" placeholder="App password">
+                            <label for="set-imap-pass">密码</label>
+                            <input id="set-imap-pass" type="password" x-model="settings.imap.password" placeholder="应用专用密码">
                         </div>
                     </div>
                     <button class="btn btn-secondary" @click="testIMAP()" :disabled="testing.imap">
-                        <span x-show="!testing.imap">Test Connection</span>
-                        <span x-show="testing.imap"><span class="spinner" style="width:14px;height:14px;border-width:2px;"></span> Testing...</span>
+                        <span x-show="!testing.imap">测试连接</span>
+                        <span x-show="testing.imap"><span class="spinner" style="width:14px;height:14px;border-width:2px;"></span> 测试中…</span>
                     </button>
                     <span class="mt-1" style="margin-left: 0.5rem; font-size: 0.85rem;"
                           x-show="testResults.imap" x-text="testResults.imap"
@@ -92,37 +93,37 @@
                 </div>
             </div>
 
-            <!-- User Profile -->
+            <!-- 用户资料 -->
             <div class="card">
-                <div class="card-header"><h3>User Profile</h3></div>
+                <div class="card-header"><h3>用户资料</h3></div>
                 <div class="card-body">
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Name</label>
-                            <input type="text" x-model="settings.user.name" placeholder="Your name">
+                            <label for="set-user-name">姓名</label>
+                            <input id="set-user-name" type="text" x-model="settings.user.name" placeholder="你的姓名">
                         </div>
                         <div class="form-group">
-                            <label>Email</label>
-                            <input type="email" x-model="settings.user.email" placeholder="your@email.com">
+                            <label for="set-user-email">邮箱</label>
+                            <input id="set-user-email" type="email" x-model="settings.user.email" placeholder="your@email.com">
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Reply Tone</label>
-                        <select x-model="settings.user.tone">
-                            <option value="polite and concise">Polite and Concise</option>
-                            <option value="formal and academic">Formal and Academic</option>
-                            <option value="friendly and warm">Friendly and Warm</option>
-                            <option value="casual">Casual</option>
+                        <label for="set-tone">回复语气</label>
+                        <select id="set-tone" x-model="settings.user.tone">
+                            <option value="polite and concise">礼貌简洁</option>
+                            <option value="formal and academic">正式学术</option>
+                            <option value="friendly and warm">友好亲切</option>
+                            <option value="casual">轻松随意</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Email Signature</label>
-                        <textarea x-model="settings.user.signature" placeholder="--&#10;Your Name&#10;Title"></textarea>
+                        <label for="set-sign">邮件签名</label>
+                        <textarea id="set-sign" x-model="settings.user.signature" placeholder="--&#10;你的姓名&#10;职务"></textarea>
                     </div>
                 </div>
             </div>
 
-            <!-- Google Account -->
+            <!-- Google 账户 -->
             <div class="card">
                 <div class="card-header">
                     <h3>Google（Gmail + Calendar）</h3>
@@ -137,8 +138,8 @@
                         <tr><th>授权状态</th><td x-text="settings.google.authorized ? '已授权' : '未授权'"></td></tr>
                     </table>
                     <div class="form-group" style="margin-top:0.6rem;">
-                        <label>Calendar ID</label>
-                        <input type="text" x-model="settings.google.calendar_id" placeholder="primary">
+                        <label for="set-cal-id">Calendar ID</label>
+                        <input id="set-cal-id" type="text" x-model="settings.google.calendar_id" placeholder="primary">
                     </div>
                     <template x-if="!settings.google.authorized && settings.google.enabled">
                         <p class="text-muted" style="font-size:0.85rem;">
@@ -147,16 +148,16 @@
                     </template>
                     <button class="btn btn-secondary" @click="checkGoogle()" :disabled="checkingGoogle">
                         <span x-show="!checkingGoogle">刷新连接状态</span>
-                        <span x-show="checkingGoogle"><span class="spinner" style="width:14px;height:14px;border-width:2px;"></span> 检查中...</span>
+                        <span x-show="checkingGoogle"><span class="spinner" style="width:14px;height:14px;border-width:2px;"></span> 检查中…</span>
                     </button>
                 </div>
             </div>
 
-            <!-- Save -->
+            <!-- 保存 -->
             <div style="text-align: right; margin-top: 1rem;">
                 <button class="btn btn-primary btn-lg" @click="saveSettings()" :disabled="saving">
-                    <span x-show="!saving">Save Settings</span>
-                    <span x-show="saving"><span class="spinner" style="width:14px;height:14px;border-width:2px;"></span> Saving...</span>
+                    <span x-show="!saving">保存设置</span>
+                    <span x-show="saving"><span class="spinner" style="width:14px;height:14px;border-width:2px;"></span> 保存中…</span>
                 </button>
             </div>
         </div>

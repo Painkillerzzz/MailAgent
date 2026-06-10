@@ -1,17 +1,15 @@
 {% if events %}
 {% for evt in events %}
-<div style="padding: 0.6rem 0; border-bottom: 1px solid #eee;">
+<div class="reminder-item">
     <strong style="font-size: 0.9rem;">{{ evt.title }}</strong>
     <div style="font-size: 0.85rem; color: var(--color-primary); margin-top: 0.25rem;">
         {{ evt.start_time.strftime('%H:%M') }} &ndash; {{ evt.end_time.strftime('%H:%M') }}
     </div>
     {% if evt.attendees %}
-    <div style="font-size: 0.8rem; color: #888; margin-top: 0.15rem;">
-        {{ evt.attendees | join(', ') }}
-    </div>
+    <div class="reminder-meta">{{ evt.attendees | join(', ') }}</div>
     {% endif %}
 </div>
 {% endfor %}
 {% else %}
-<p class="text-muted" style="text-align:center; padding:1rem;">No events today</p>
+<p class="text-muted" style="text-align:center; padding:1rem;">今日暂无日程</p>
 {% endif %}
