@@ -6,7 +6,8 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+import threading
+from concurrent.futures import ThreadPoolExecutor
 
 from mail_agent.calendar.scheduler import CalendarScheduler
 from mail_agent.calendar.store import CalendarStore
@@ -106,6 +107,8 @@ class MailAgent:
             self._calendar_store, self._llm, self._config.calendar
         )
         self._reply_gen = ReplyGenerator(self._llm, self._config.user)
+        # 并行处理多封邮件时，串行化日历写入，避免并发冲突检查竞态导致重复占用
+        self._write_lock = threading.Lock()
 
     @property
     def calendar_store(self):
@@ -157,9 +160,17 @@ class MailAgent:
         if analysis.contains_schedule:
             steps.append("Step 3: 日历调度")
             try:
-                event, conflict = self._scheduler.schedule_from_email(
-                    email_msg, analysis, write=self._write_calendar
-                )
+                if self._write_calendar:
+                    # 写入模式：串行化「冲突检查 + 落库」整段，避免并发双订
+                    with self._write_lock:
+                        event, conflict = self._scheduler.schedule_from_email(
+                            email_msg, analysis, write=True
+                        )
+                else:
+                    # 展示模式：只读，安全并行
+                    event, conflict = self._scheduler.schedule_from_email(
+                        email_msg, analysis, write=False
+                    )
                 result.calendar_event = event
                 result.schedule_conflict = conflict
                 if event:
@@ -271,23 +282,42 @@ class MailAgent:
         )
 
     def process_emails(
-        self, emails: list[EmailMessage]
+        self, emails: list[EmailMessage], max_workers: int = 8
     ) -> list[ProcessingResult]:
-        """批量处理邮件
+        """批量处理邮件（多封并发，每封内部仍按依赖顺序调用 LLM）
+
+        每封邮件相互独立，处理过程主要是若干次 LLM 调用（分析/解析时间/生成回复），
+        故跨邮件并行可显著缩短总耗时。日历写入由 _write_lock 串行化保证安全。
 
         Args:
             emails: 邮件列表
+            max_workers: 最大并发数（默认 8，避免过多并发触发 LLM 限流）
 
         Returns:
             处理结果列表，按优先级降序排列
         """
-        results = []
-        for email_msg in emails:
-            try:
-                result = self.process_email(email_msg)
-                results.append(result)
-            except Exception as e:
-                logger.error("处理邮件 '%s' 失败: %s", email_msg.subject, e)
+        results: list[ProcessingResult] = []
+        workers = max(1, min(max_workers, len(emails)))
+
+        if workers == 1:
+            for email_msg in emails:
+                try:
+                    results.append(self.process_email(email_msg))
+                except Exception as e:  # noqa: BLE001
+                    logger.error("处理邮件 '%s' 失败: %s", email_msg.subject, e)
+        else:
+            with ThreadPoolExecutor(
+                max_workers=workers, thread_name_prefix="mailagent"
+            ) as pool:
+                futures = [
+                    (pool.submit(self.process_email, em), em) for em in emails
+                ]
+                for fut, email_msg in futures:
+                    try:
+                        results.append(fut.result())
+                    except Exception as e:  # noqa: BLE001
+                        logger.error("处理邮件 '%s' 失败: %s", email_msg.subject, e)
+
         # 按优先级降序排列
         results.sort(key=lambda r: r.priority.total_score, reverse=True)
         return results
