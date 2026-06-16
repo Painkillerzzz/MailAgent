@@ -13,7 +13,7 @@ function showToast(message, type = 'info', duration = 5000) {
 document.addEventListener('alpine:init', () => {
     Alpine.data('fetchPanel', () => ({
         status: { enabled: false, authorized: false, credentials_exists: false },
-        opts: { limit: 10 },
+        opts: { limit: 5 },
         fetching: false,
         lastResult: '',
         lastOk: false,

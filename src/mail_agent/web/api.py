@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from starlette.concurrency import run_in_threadpool
 
 from mail_agent.agent.orchestrator import MailAgent
 from mail_agent.calendar.store import CalendarStore
@@ -162,7 +163,6 @@ async def api_fetch_emails(request: Request):
 
     展示导向：生成回复草稿文本供查看，但不推送 Gmail 草稿、不发送、不标记已读。
     """
-    config = load_config()
     try:
         body = await request.json()
     except Exception:  # noqa: BLE001
@@ -171,8 +171,14 @@ async def api_fetch_emails(request: Request):
         limit = int(body.get("limit", 10))
     except (TypeError, ValueError):
         limit = 10
-    limit = max(1, min(limit, 50))  # 钳制，避免一次拉取过多阻塞
+    limit = max(1, min(limit, 50))  # 钳制，避免一次拉取过多
+    # 阻塞型工作（Gmail 拉取 + 逐封 LLM 处理，可能耗时数分钟）放到线程池，
+    # 避免阻塞事件循环导致整个仪表板在处理期间卡死。
+    return await run_in_threadpool(_fetch_and_process, limit)
 
+
+def _fetch_and_process(limit: int):
+    config = load_config()
     try:
         if config.google.enabled:
             from mail_agent.gapi.auth import get_credentials
@@ -227,7 +233,11 @@ async def api_selfcheck(request: Request):
     except Exception:  # noqa: BLE001
         body = {}
     include_send = bool(body.get("send", False))
+    # 阻塞型的真实读写回读放到线程池，避免阻塞事件循环
+    return await run_in_threadpool(_run_selfcheck, config, include_send)
 
+
+def _run_selfcheck(config, include_send: bool):
     try:
         from mail_agent.gapi.auth import get_credentials
         from mail_agent.gapi.gcalendar import GoogleCalendarClient
@@ -285,6 +295,11 @@ async def api_process_email(request: Request):
         body=str(form.get("body", "")),
         date=datetime.now(timezone.utc),
     )
+    # LLM 分析为阻塞调用，放到线程池避免阻塞事件循环
+    return await run_in_threadpool(_process_one, email_msg)
+
+
+def _process_one(email_msg: EmailMessage):
     agent = _get_agent()
     result = agent.process_email(email_msg)
     _get_result_store().add(result)
@@ -578,6 +593,13 @@ async def api_save_settings(request: Request):
 async def api_test_llm(request: Request):
     try:
         body = await request.json()
+    except Exception:  # noqa: BLE001
+        body = {}
+    return await run_in_threadpool(_test_llm, body)
+
+
+def _test_llm(body: dict):
+    try:
         api_key = body.get("api_key", "")
         # 如果是脱敏值，使用已保存的
         if api_key.startswith("****"):
@@ -585,8 +607,7 @@ async def api_test_llm(request: Request):
             api_key = store.get_value("llm", "api_key", "")
         if not api_key:
             # 回落到环境变量
-            config = load_config()
-            api_key = config.llm.api_key
+            api_key = load_config().llm.api_key
 
         from mail_agent.config import LLMConfig
 
@@ -614,6 +635,13 @@ async def api_test_llm(request: Request):
 async def api_test_imap(request: Request):
     try:
         body = await request.json()
+    except Exception:  # noqa: BLE001
+        body = {}
+    return await run_in_threadpool(_test_imap, body)
+
+
+def _test_imap(body: dict):
+    try:
         from mail_agent.config import IMAPConfig
 
         password = body.get("password", "")
