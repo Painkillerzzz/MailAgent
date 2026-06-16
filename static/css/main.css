@@ -349,6 +349,20 @@ th { background: #f8f9fa; font-weight: 600; font-size: 0.8rem; text-transform: u
 .empty-state p { font-size: 0.95rem; }
 
 /* ── Calendar page overrides ── */
+/* 关键：隔离全局 table/th/td 样式（width/border-collapse/padding/border/背景/字号）
+   对 FullCalendar 内部网格表格的污染——否则月/周/日视图的格子被撑变形，
+   事件块会溢出到相邻日期格。让 FC 用自己的布局规则。 */
+.fc table { border-collapse: separate; }
+.fc th, .fc td {
+    padding: 0;
+    border-bottom: none;
+    background: transparent;
+    font-size: inherit;
+    font-weight: normal;
+    color: inherit;
+    text-align: inherit;
+    text-transform: none;
+}
 .fc { font-size: 0.9rem; }
 .fc .fc-toolbar-title { font-size: 1.2rem; }
 .fc .fc-button { font-size: 0.8rem; }
